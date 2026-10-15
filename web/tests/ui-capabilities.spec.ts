@@ -67,13 +67,14 @@ test("Explorer reads monitoring through the real summary API with a fresh-read o
   page,
 }) => {
   await connect("/explorer");
-  await choose(page, "Interface", "Operational summaries");
-  await choose(page, "Projection", "Monitoring");
+  await choose(page, "Source", "sabnzbd");
   await page
     .getByRole("checkbox", { exact: true, name: "Fresh upstream read" })
     .check();
-  const response = page.waitForResponse((item) =>
-    item.url().endsWith("/v1/summaries/status?no_cache=true"),
+  const response = page.waitForResponse(
+    (item) =>
+      item.url().includes("/v1/sources/sabnzbd/summaries/status") &&
+      item.request().headers()["cache-control"] === "no-cache",
   );
 
   await page.getByRole("button", { exact: true, name: "Fetch" }).click();
@@ -84,6 +85,65 @@ test("Explorer reads monitoring through the real summary API with a fresh-read o
   await expect(page.getByLabel("JSON response", { exact: true })).toHaveValue(
     /"source": "sabnzbd"/,
   );
+});
+
+test("Explorer offers every connection directly and clears results when the source changes", async ({
+  connect,
+  page,
+}) => {
+  await connect("/explorer");
+  await expect(
+    page.getByRole("combobox", { exact: true, name: "Interface" }),
+  ).toHaveCount(0);
+  await page.getByRole("combobox", { exact: true, name: "Source" }).click();
+
+  for (const name of [
+    "All sources",
+    "sonarr",
+    "radarr",
+    "seerr",
+    "sabnzbd",
+    "cleanuparr",
+    "bazarr",
+    "maintainerr",
+  ]) {
+    await expect(page.getByRole("option", { exact: true, name })).toBeVisible();
+  }
+
+  await page.keyboard.press("Escape");
+
+  for (const name of ["sabnzbd", "cleanuparr", "bazarr", "maintainerr"]) {
+    await choose(page, "Source", name);
+    await expect(page.getByLabel("JSON response", { exact: true })).toHaveCount(
+      0,
+    );
+    const response = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+        `/v1/sources/${name}/summaries/status`,
+    );
+
+    await page.getByRole("button", { exact: true, name: "Fetch" }).click();
+    const data = (await (await response).json()) as {
+      sources: { source: string }[];
+    };
+
+    expect(data.sources.map((source) => source.source)).toEqual([name]);
+    await expect(page.getByLabel("JSON response", { exact: true })).toHaveValue(
+      new RegExp(`"source": "${name}"`),
+    );
+  }
+
+  await choose(page, "Source", "seerr");
+  await expect(
+    page.getByText(
+      "A requester account must be linked before commands are available.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { exact: true, name: "Run command" }),
+  ).toHaveCount(0);
 });
 
 test("overview refresh bypasses each authorized operational cache", async ({
@@ -112,6 +172,62 @@ test("overview refresh bypasses each authorized operational cache", async ({
   }
 });
 
+test("Explorer does not display Overview's cached response before Fetch", async ({
+  connect,
+  page,
+}) => {
+  await connect("/explorer");
+  await page.getByRole("link", { exact: true, name: "Overview" }).click();
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Library" }),
+  ).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("link", { exact: true, name: "Explorer" }).click();
+  await expect(
+    page.getByRole("heading", { exact: true, name: "No response yet" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("JSON response", { exact: true })).toHaveCount(
+    0,
+  );
+  await page.getByLabel("Fresh upstream read", { exact: true }).check();
+  const response = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/v1/summaries/library" &&
+      response.request().headers()["cache-control"] === "no-cache",
+  );
+
+  await page.getByRole("button", { exact: true, name: "Fetch" }).click();
+  expect((await response).ok()).toBe(true);
+  await expect(page.getByLabel("JSON response", { exact: true })).toHaveValue(
+    /"bypass_requested": true/,
+  );
+});
+
+test("disabled account commands do not break individual source reads", async ({
+  connect,
+  page,
+}) => {
+  await page.route("**/v1/tools", (route) =>
+    route.fulfill({ json: { error: "not_found" }, status: 404 }),
+  );
+  await connect("/explorer");
+  await choose(page, "Source", "sabnzbd");
+  await page.getByRole("button", { exact: true, name: "Fetch" }).click();
+  await expect(page.getByLabel("JSON response", { exact: true })).toHaveValue(
+    /"source": "sabnzbd"/,
+  );
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  await choose(page, "Source", "seerr");
+  await expect(
+    page.getByText("Enable MCP in Settings to use account commands.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { exact: true, name: "Run command" }),
+  ).toHaveCount(0);
+});
+
 test("Explorer discovers account commands and passes multiword inputs without native URL construction", async ({
   connect,
   page,
@@ -119,8 +235,9 @@ test("Explorer discovers account commands and passes multiword inputs without na
   await connect("/explorer", requester);
   await expect(
     page.getByRole("combobox", { exact: true, name: "Source" }),
-  ).toHaveCount(0);
-  await choose(page, "Command", "search_media");
+  ).toBeVisible();
+  await choose(page, "Source", "seerr");
+  await choose(page, "Operation", "search_media");
   await page
     .getByLabel("Arguments (JSON)", { exact: true })
     .fill('{"query":"Moonberry Express"}');
@@ -164,10 +281,11 @@ test("Explorer writes require an explicit account confirmation and never retry u
     });
   });
   await connect("/explorer", requester);
-  await choose(page, "Command", "request_movie");
+  await choose(page, "Source", "seerr");
+  await choose(page, "Operation", "request_movie");
   const run = page.getByRole("button", { exact: true, name: "Run command" });
   const confirmation = page.getByRole("checkbox", {
-    name: "Apply this change to my Seerr account",
+    name: "Apply this change to my account",
   });
 
   await expect(run).toBeDisabled();
@@ -186,7 +304,7 @@ test("Explorer writes require an explicit account confirmation and never retry u
   );
   await expect.poll(() => writes.length).toBe(1);
   await expect(run).toBeDisabled();
-  await choose(page, "Command", "my_quota");
+  await choose(page, "Operation", "my_quota");
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   expect(writes).toEqual([{ tmdb_id: 42 }]);
 });
@@ -203,7 +321,8 @@ test("Explorer rejects non-object arguments before sending a command", async ({
     }
   });
   await connect("/explorer", requester);
-  await choose(page, "Command", "search_media");
+  await choose(page, "Source", "seerr");
+  await choose(page, "Operation", "search_media");
   await page.getByLabel("Arguments (JSON)", { exact: true }).fill("[]");
   await page.getByRole("button", { exact: true, name: "Run command" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(
@@ -278,9 +397,9 @@ test("calendar-only access never requests operational projections or shows monit
   ).toBeVisible();
   await expect(page.getByText("sabnzbd", { exact: true })).toHaveCount(0);
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
-  await choose(page, "Command", "upcoming_releases");
+  await choose(page, "Operation", "upcoming_releases");
   await expect(
     page.getByRole("combobox", { exact: true, name: "Source" }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   expect(reads).toHaveLength(0);
 });

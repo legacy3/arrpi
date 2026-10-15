@@ -13,7 +13,7 @@ export const test = base.extend<{
       headers: { Authorization: `Bearer ${browserKey}` },
     });
 
-    expect(response.ok()).toBe(true);
+    expect(response.status()).toBe(200);
     await provide((await response.json()) as SettingsEnvelope);
   },
   connect: async ({ page }, provide) => {

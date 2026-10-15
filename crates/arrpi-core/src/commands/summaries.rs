@@ -18,9 +18,42 @@ impl Commands {
         kind: SummaryKind,
         args: Fresh,
     ) -> Result<Summary, ApiError> {
-        let mut sources = Vec::with_capacity(self.sources.len());
+        self.selected_summaries(principal, None, kind, args).await
+    }
+
+    /// Read one source without querying or returning unrelated connections.
+    ///
+    /// # Errors
+    /// Returns forbidden unless this exact source grants the requested projection.
+    pub async fn source_summary(
+        &self,
+        principal: &Principal,
+        source: &str,
+        kind: SummaryKind,
+        args: Fresh,
+    ) -> Result<Summary, ApiError> {
+        self.selected_summaries(principal, Some(source), kind, args)
+            .await
+    }
+
+    async fn selected_summaries(
+        &self,
+        principal: &Principal,
+        selected: Option<&str>,
+        kind: SummaryKind,
+        args: Fresh,
+    ) -> Result<Summary, ApiError> {
+        let mut sources = Vec::with_capacity(if selected.is_some() {
+            1
+        } else {
+            self.sources.len()
+        });
 
         for (name, source) in &self.sources {
+            if selected.is_some_and(|selected| selected != name) {
+                continue;
+            }
+
             let Some(summary) = source.summaries().filter(|summary| summary.supports(kind)) else {
                 continue;
             };

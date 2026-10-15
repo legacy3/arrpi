@@ -17,6 +17,7 @@ Personal feed URLs need neither browser cookies nor a normal ArrPi client key.
 | `GET /v1/config`, `PUT /v1/config`                     | Admin settings; revisioned edits and masked credentials                              |
 | `GET /v1/config/connections/{source}/health`           | Fresh operator-only connection check; requires `config:manage`                       |
 | `GET /v1/summaries/queue`, `/library`, `/status`       | Minimal operational counters with separate grants and per-source completeness        |
+| `GET /v1/sources/{source}/summaries/{kind}`            | The same projection for one authorized source, without querying unrelated apps       |
 | `GET /v1/status`                                       | Policy and counters for authorized sources; no native URLs or keys                   |
 | `GET /v1/tools`, `POST /v1/tools/{tool}`               | Account-scoped command discovery and execution; same checks as MCP                   |
 | `POST /v1/mcp`                                         | Stateless Streamable HTTP MCP; account Bearer credential required                    |
@@ -32,16 +33,22 @@ The combined calendar needs `source:calendar-view`; this grants no raw calendar 
 other native endpoint access. The `metrics` permission is separate and grants
 aggregate counters across the server. `/v1/status` lists only sources granted to
 the presented key. Each source includes its permitted native `endpoints`, normalized
-`summaries` (`library`, `queue`, `status`) and `calendar` access. The configured
+`summaries` (`library`, `queue`, `status`), `calendar` access and `account` capability. The configured
 account broker is also visible to configuration managers and bound accounts with
 catalog, request or issue read access. Discovery does not probe upstreams or grant
 additional operations.
 
-The web overview reads only the summaries advertised for its client. Explorer has
-three interfaces: native reads, operational summaries and shared commands. Shared
-commands use `GET /v1/tools` for the current account's names, input schemas and
-read/write annotations, then `POST /v1/tools/{tool}` with JSON arguments. This is
-the same executor and policy used by MCP. Seerr actions need an account-bound
+The web overview reads only the summaries advertised for its client. Explorer
+uses one source selector and one operation selector. Individual sources offer
+their permitted native reads, summaries and account commands; **All sources**
+groups combined projections and commands. Source changes clear the previous
+response and pending input. Shared commands use `GET /v1/tools` for the current
+account's names, input schemas and
+read/write annotations, then `POST /v1/tools/{tool}` with JSON arguments. This uses
+the same executor and policy as MCP. A command's `source` identifies its account
+broker; omitted means a combined operation. The catalog's `account` is the caller's
+local requester name or null. Configuration credentials cannot carry requester
+bindings. Seerr actions need an account-bound
 client; configuration access alone does not impersonate the owner. Writes require
 explicit confirmation and are never automatically retried. Native reads and
 operational summaries remain usable when MCP or Seerr is not configured.

@@ -1,6 +1,6 @@
 [package]
 name = "arrpi-core"
-version = "0.1.3"
+version = "0.1.4"
 edition.workspace = true
 rust-version.workspace = true
 description = "Media source capabilities, policies and command contracts"

@@ -47,6 +47,8 @@ for (const scenario of [
       await expect(
         page.getByRole("heading", { exact: true, name: "Explorer" }),
       ).toBeVisible();
+      await page.getByRole("combobox", { exact: true, name: "Source" }).click();
+      await page.getByRole("option", { exact: true, name: "sonarr" }).click();
       await expect(page.getByLabel("Month", { exact: true })).toHaveValue(
         scenario.month,
       );

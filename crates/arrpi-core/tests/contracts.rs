@@ -32,6 +32,26 @@ fn catalog_defaults_to_english_and_preserves_explicit_languages() {
 }
 
 #[test]
+fn configuration_credentials_cannot_become_shared_requester_accounts() {
+    for permission in ["admin", "config:manage"] {
+        let mut config = configured();
+
+        config.clients[0].permissions = vec![permission.into()];
+        config.clients[0].seerr_user = Some(arrpi_core::policy::Binding {
+            id: 1,
+            plex_id: 101,
+        });
+        assert!(
+            config
+                .validate()
+                .expect_err("shared admin key must stay unbound")
+                .reason()
+                .contains("configuration clients cannot bind")
+        );
+    }
+}
+
+#[test]
 fn credentials_deserialize_into_zeroizing_storage_and_never_serialize() {
     let secret: Secret = serde_json::from_str("\"fake-native-secret\"").expect("string credential");
     let omitted: Secret = serde_json::from_str("null").expect("omitted credential");

@@ -20,12 +20,24 @@ pub(crate) async fn http_list(
 ) -> Result<Json<CommandCatalog>, HttpError> {
     let principal = auth::authenticate(&headers, &gateway.clients)?;
     let definitions = gateway.commands.list(principal).await?;
+    let broker = gateway.commands.sources.account_source();
     let tools = definitions
         .into_iter()
-        .map(CommandDescriptor::from)
+        .map(|definition| {
+            let account = ToolId::parse(&definition.name).is_some_and(|tool| !tool.is_native());
+            let mut descriptor = CommandDescriptor::from(definition);
+
+            descriptor.source = broker
+                .filter(|_| account)
+                .map(|source| source.descriptor().name.clone());
+            descriptor
+        })
         .collect();
 
-    Ok(Json(CommandCatalog { tools }))
+    Ok(Json(CommandCatalog {
+        tools,
+        account: principal.binding.as_ref().map(|_| principal.name.clone()),
+    }))
 }
 
 pub(crate) async fn http_execute(

@@ -156,6 +156,7 @@ pub(crate) fn router_shared(gateway: Arc<Gateway>) -> Result<Router, ApiError> {
     let protected = Router::new()
         .route("/{source}/api/v3/{endpoint}", get(native))
         .route("/summaries/{kind}", get(summary))
+        .route("/sources/{source}/summaries/{kind}", get(source_summary))
         .route("/calendar", get(calendar::combined))
         .route("/calendar.ics", get(crate::ical::export))
         .route("/calendar.rss", get(crate::rss::export));
@@ -387,6 +388,7 @@ async fn status(
         .map(|(name, source)| SourceInfo {
             name: name.to_owned(),
             kind: source.descriptor().kind.to_owned(),
+            account: source.accounts().is_some(),
             endpoints: source
                 .descriptor()
                 .endpoints
@@ -433,5 +435,23 @@ async fn summary(
 
     Ok(Json(
         gateway.commands.summaries(principal, kind, args).await?,
+    ))
+}
+
+async fn source_summary(
+    State(gateway): State<Arc<Gateway>>,
+    Path((source, kind)): Path<(String, arrpi_core::summaries::SummaryKind)>,
+    axum::extract::Query(mut args): axum::extract::Query<arrpi_core::arguments::Fresh>,
+    headers: HeaderMap,
+) -> Result<Json<arrpi_core::summaries::Summary>, HttpError> {
+    let principal = auth::authenticate(&headers, &gateway.clients)?;
+
+    args.no_cache |= query::read_mode(&headers) == arrpi_core::source::ReadMode::Fresh;
+
+    Ok(Json(
+        gateway
+            .commands
+            .source_summary(principal, &source, kind, args)
+            .await?,
     ))
 }

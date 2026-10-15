@@ -22,6 +22,7 @@ const status: Status = {
   config_manage: false,
   sources: [
     {
+      account: false,
       calendar: true,
       counters: { hits: 35, misses: 5, stale: 0, upstream_failures: 0 },
       endpoints: ["calendar", "series", "queue", "health"],
@@ -30,6 +31,7 @@ const status: Status = {
       summaries: [],
     },
     {
+      account: false,
       calendar: true,
       counters: { hits: 12, misses: 3, stale: 1, upstream_failures: 2 },
       endpoints: ["calendar", "movie", "queue", "health"],
@@ -69,6 +71,11 @@ const calendar: Calendar = {
   ],
 };
 
+async function chooseSource(page: Page) {
+  await page.getByRole("combobox", { exact: true, name: "Source" }).click();
+  await page.getByRole("option", { exact: true, name: "sonarr" }).click();
+}
+
 async function connect(page: Page) {
   await page.getByLabel("Client key").fill(key);
   await page.getByRole("button", { exact: true, name: "Connect" }).click();
@@ -91,31 +98,47 @@ async function fixtures(page: Page, limited = false) {
 
     const path = new URL(route.request().url()).pathname;
 
-    if (path === "/v1/status") {
-      await route.fulfill({
-        json: limited
-          ? {
-              ...status,
-              sources: status.sources.map((source) => ({
-                ...source,
-                endpoints: [],
-              })),
-            }
-          : status,
-      });
-    } else if (path === "/v1/calendar") {
-      await route.fulfill({ json: calendar });
-    } else {
-      await route.fulfill({
-        headers: {
-          age: "0",
-          "x-arrpi-cache":
-            route.request().headers()["cache-control"] === "no-cache"
-              ? "miss"
-              : "hit",
-        },
-        json: [{ id: 1, title: "Native response", unknown: true }],
-      });
+    switch (path) {
+      case "/v1/calendar": {
+        await route.fulfill({ json: calendar });
+
+        break;
+      }
+
+      case "/v1/status": {
+        await route.fulfill({
+          json: limited
+            ? {
+                ...status,
+                sources: status.sources.map((source) => ({
+                  ...source,
+                  endpoints: [],
+                })),
+              }
+            : status,
+        });
+
+        break;
+      }
+
+      case "/v1/tools": {
+        await route.fulfill({ json: { account: null, tools: [] } });
+
+        break;
+      }
+
+      default: {
+        await route.fulfill({
+          headers: {
+            age: "0",
+            "x-arrpi-cache":
+              route.request().headers()["cache-control"] === "no-cache"
+                ? "miss"
+                : "hit",
+          },
+          json: [{ id: 1, title: "Native response", unknown: true }],
+        });
+      }
     }
   });
   await page.goto("/");
@@ -197,7 +220,8 @@ test("explorer fetches native JSON with optional cache bypass", async ({
   await connect(page);
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
-  await page.getByRole("combobox", { exact: true, name: "Endpoint" }).click();
+  await chooseSource(page);
+  await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
   await page.getByRole("option", { exact: true, name: "series" }).click();
   await page.getByLabel("Fresh upstream read").check();
   const fresh = page.waitForRequest(
@@ -229,7 +253,7 @@ test("calendar-only key has no native explorer controls", async ({ page }) => {
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
   await expect(
-    page.getByRole("heading", { name: "No permitted commands" }),
+    page.getByRole("heading", { name: "No permitted operations" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { exact: true, name: "Fetch" }),
@@ -337,10 +361,11 @@ test("empty month input recovers with navigation and queue page is required", as
   );
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
-  await page.getByRole("combobox", { exact: true, name: "Endpoint" }).click();
+  await chooseSource(page);
+  await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
   await page.getByRole("option", { exact: true, name: "queue" }).click();
   await expect(
-    page.getByRole("combobox", { exact: true, name: "Endpoint" }),
+    page.getByRole("combobox", { exact: true, name: "Operation" }),
   ).toBeFocused();
   const pageInput = page.getByLabel("Page", { exact: true });
 
@@ -398,7 +423,8 @@ test("fresh preference changes no data until Fetch is pressed", async ({
   await connect(page);
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
-  await page.getByRole("combobox", { exact: true, name: "Endpoint" }).click();
+  await chooseSource(page);
+  await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
   await page.getByRole("option", { exact: true, name: "series" }).click();
   await page.getByRole("button", { exact: true, name: "Fetch" }).click();
   await expect(

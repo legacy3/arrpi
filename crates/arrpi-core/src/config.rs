@@ -515,6 +515,17 @@ fn valid_name(name: &str) -> bool {
 
 impl Client {
     fn validate_binding(&self) -> Result<(), ConfigError> {
+        if self.seerr_user.is_some()
+            && self
+                .permissions
+                .iter()
+                .any(|permission| matches!(permission.as_ref(), "admin" | "config:manage"))
+        {
+            return Err(ConfigError::invalid(
+                "configuration clients cannot bind requester accounts",
+            ));
+        }
+
         if self.seerr_user.as_ref().is_some_and(|binding| {
             binding.id == 0 || binding.plex_id == 0 || binding.id > u64::from(u32::MAX)
         }) {

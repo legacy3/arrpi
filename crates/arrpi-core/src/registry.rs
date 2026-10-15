@@ -106,6 +106,7 @@ pub struct InputSchema(Arc<Map<String, Value>>);
 #[derive(Debug, JsonSchema, Serialize)]
 pub struct CommandCatalog {
     pub tools: Vec<CommandDescriptor>,
+    pub account: Option<String>,
 }
 
 /// A command description retains the shared immutable schema allocation.
@@ -113,6 +114,8 @@ pub struct CommandCatalog {
 #[serde(rename_all = "camelCase")]
 pub struct CommandDescriptor {
     pub name: Cow<'static, str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
     pub description: Cow<'static, str>,
     pub input_schema: InputSchema,
     pub annotations: BTreeMap<CommandAnnotation, bool>,
@@ -134,6 +137,7 @@ impl From<ToolDefinition> for CommandDescriptor {
 
         Self {
             name: definition.name,
+            source: None,
             description: definition.description,
             input_schema: definition.input_schema,
             annotations: [

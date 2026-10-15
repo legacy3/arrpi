@@ -17,6 +17,9 @@ The UI separates **Connections** (`/settings`), **Access** (`/settings/access`),
 
 [External OAuth](oauth.md) has a separate settings page for its authorization server and account bindings. It is disabled by default.
 
+Configuration clients (`admin` or `config:manage`) must remain unbound. Use a
+separate requester client for Seerr actions.
+
 UI and CLI edits use the same admin API. `GET /v1/config` returns a revision and
 redacted settings; `PUT /v1/config` validates the complete document, preserves null
 secret fields by source/client identity, and rejects an outdated revision with 409.
@@ -75,7 +78,10 @@ incoming authorization and identity headers, inject an ArrPi bearer credential
 server-side, and set `X-ArrPi-Web-Auth: proxy`. This header only selects the UI's
 automatic connection screen; it grants no API access. Never expose the injected key
 in HTML, browser storage or frontend configuration. Cookie-based proxies must check
-the exact trusted Origin on PUT settings requests and reject other write methods.
+the exact trusted Origin on PUT settings requests and allowlisted POST command
+paths, and reject other writes. Select the signed-in user's requester credential
+for command routes while retaining the admin credential for configuration.
+Derive that mapping from verified identity, and leave unknown users unbound.
 
 ## Container runtime
 

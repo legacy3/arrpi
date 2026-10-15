@@ -154,6 +154,7 @@ test("overview labels requester and future source kinds without inventing native
     ...status.sources.filter((source) => source.kind !== "seerr"),
     {
       ...sample,
+      account: false,
       calendar: false,
       endpoints: [],
       kind: "seerr",
@@ -161,6 +162,7 @@ test("overview labels requester and future source kinds without inventing native
     },
     {
       ...sample,
+      account: false,
       calendar: false,
       endpoints: [],
       kind: "future-provider",

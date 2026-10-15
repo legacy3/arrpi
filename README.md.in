@@ -72,7 +72,7 @@ Open `http://127.0.0.1:3000/` and enter the admin key. Add your apps’ URLs and
 
 Create client keys under **Settings → Access** and choose which sources and operations each client can use. Use these keys in dashboards and scripts. Keep the admin key for managing ArrPi.
 
-The overview shows permitted library, queue and monitoring summaries. **Explorer** covers native endpoints, operational summaries and account-scoped commands, including Seerr searches, requests and issues. The calendar combines the connected Sonarr and Radarr libraries. Personal RSS/iCalendar setup is covered in [feeds](docs/api.md#personal-feed-subscriptions).
+The overview shows permitted library, queue and monitoring summaries. In **Explorer**, choose a source to see its available reads and account commands. **All sources** groups combined library, queue, monitoring and calendar operations. Seerr searches, requests and issues use the connected requester account. The calendar combines the connected Sonarr and Radarr libraries. Personal RSS/iCalendar setup is covered in [feeds](docs/api.md#personal-feed-subscriptions).
 
 ## CLI
 

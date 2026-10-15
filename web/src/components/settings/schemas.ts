@@ -73,15 +73,16 @@ export function clientSchema(
       }
 
       if (
-        oauthBound &&
+        (oauthBound || Boolean(value.seerr_id) || Boolean(value.plex_id)) &&
         hasConfigAccess(
           value.permissions.split(",").map((permission) => permission.trim()),
         )
       ) {
         context.addIssue({
           code: "custom",
-          message:
-            "Remove this client’s OAuth bindings before granting configuration access.",
+          message: oauthBound
+            ? "Remove this client’s OAuth bindings before granting configuration access."
+            : "Keep configuration access and requester accounts on separate clients.",
           path: ["permissions"],
         });
       }

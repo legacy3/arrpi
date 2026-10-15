@@ -182,6 +182,7 @@ test("adding one source refreshes discovery without reconnecting", async ({
 
     if (configDocument.settings.sources.extra) {
       status.sources.push({
+        account: false,
         calendar: false,
         counters: { hits: 0, misses: 0, stale: 0, upstream_failures: 0 },
         endpoints: ["qualityprofile"],
@@ -479,6 +480,32 @@ test("editing one client preserves its masked token and Plex binding", async ({
   );
   expect(saved?.sources).toEqual(original.sources);
   expect(saved?.seerr).toEqual(original.seerr);
+});
+
+test("the shared configuration credential cannot be bound to a requester", async ({
+  configDocument,
+  connect,
+  page,
+}) => {
+  const { writes } = await mockConfigEditor(page, configDocument);
+
+  await connect("/settings/access");
+  await page.getByRole("button", { exact: true, name: "Edit reader" }).click();
+  await page.getByLabel("Seerr user ID", { exact: true }).fill("1");
+  await page.getByLabel("Plex user ID", { exact: true }).fill("101");
+
+  for (const permission of ["config:manage", "admin"]) {
+    await page.getByLabel("Permissions", { exact: true }).fill(permission);
+    await page.getByLabel("Seerr user ID", { exact: true }).focus();
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(
+      "Keep configuration access and requester accounts on separate clients.",
+    );
+    await expect(
+      page.getByRole("button", { exact: true, name: "Save" }),
+    ).toBeDisabled();
+  }
+
+  expect(writes).toHaveLength(0);
 });
 
 for (const connection of [

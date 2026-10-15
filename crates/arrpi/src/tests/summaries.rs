@@ -109,6 +109,45 @@ async fn summary_http_grants_are_separate_and_partial_results_survive_source_fai
     );
 }
 
+#[tokio::test]
+async fn selecting_one_source_never_fetches_unrelated_or_unauthorized_connections() {
+    let (upstream, state) = mock(r#"[{"monitored":true,"hasFile":true,"sizeOnDisk":123}]"#).await;
+    let (unrelated, other) = mock("{}").await;
+    let config: Config = serde_json::from_value(json!({
+        "listen":"127.0.0.1:0",
+        "sources": {
+            "selected":{"kind":"radarr","url":upstream.url,"api_key":"fake-native-key"},
+            "other":{"kind":"radarr","url":unrelated.url,"api_key":"fake-native-key"}
+        },
+        "clients":[{"name":"reader","key":CLIENT_KEY,"permissions":["selected:library-summary","other:library-summary"]},
+            {"name":"restricted","key":OTHER_KEY,"permissions":["other:library-summary"]}]
+    })).expect("settings");
+    let app = router(Gateway::new(&config, tokio::time::Instant::now).expect("gateway"));
+    let path = "/v1/sources/selected/summaries/library?no_cache=true";
+
+    for (credential, status) in [
+        (None, StatusCode::UNAUTHORIZED),
+        (Some(OTHER_KEY), StatusCode::FORBIDDEN),
+    ] {
+        assert_eq!(request(&app, path, credential).await.status(), status);
+    }
+
+    assert_eq!(state.calls.load(Ordering::Relaxed), 0);
+    let response = request(&app, path, Some(CLIENT_KEY)).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let value: Value =
+        serde_json::from_slice(&to_bytes(response.into_body(), 65_536).await.expect("body"))
+            .expect("JSON");
+
+    assert_eq!(value["complete"], true);
+    assert_eq!(value["sources"].as_array().expect("sources").len(), 1);
+    assert_eq!(value["sources"][0]["source"], "selected");
+    assert_eq!(value["sources"][0]["freshness"]["bypass_requested"], true);
+    assert_eq!(state.calls.load(Ordering::Relaxed), 1);
+    assert_eq!(other.calls.load(Ordering::Relaxed), 0);
+}
+
 async fn request(
     app: &axum::Router,
     path: &str,

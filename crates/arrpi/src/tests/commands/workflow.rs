@@ -30,6 +30,39 @@ async fn source_inventory_includes_the_bound_account_broker_without_native_reads
 }
 
 #[tokio::test]
+async fn command_discovery_reports_own_account_and_broker_ownership() {
+    let (api, _native, _state) = setup().await;
+
+    for (key, name) in [(CLIENT_KEY, "one"), (OTHER_KEY, "two")] {
+        let response = reqwest::Client::new()
+            .get(format!("{}v1/tools", api.url))
+            .bearer_auth(key)
+            .send()
+            .await
+            .expect("catalog");
+        let catalog = response_json(response).await;
+
+        assert_eq!(catalog["account"], name);
+        let tools = catalog["tools"].as_array().expect("tools");
+
+        assert_eq!(
+            tools
+                .iter()
+                .find(|tool| tool["name"] == "search_media")
+                .expect("search")["source"],
+            "seerr"
+        );
+        assert!(
+            tools
+                .iter()
+                .find(|tool| tool["name"] == "list_movies")
+                .expect("library")["source"]
+                .is_null()
+        );
+    }
+}
+
+#[tokio::test]
 async fn quota_and_independent_health_are_read_only_scoped_and_fresh() {
     let (api, _native, state) = setup().await;
     let quota =

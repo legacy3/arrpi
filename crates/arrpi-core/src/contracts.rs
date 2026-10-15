@@ -65,6 +65,7 @@ pub enum Endpoint {
 pub struct SourceInfo {
     pub name: String,
     pub kind: String,
+    pub account: bool,
     pub endpoints: Vec<Endpoint>,
     pub calendar: bool,
     pub summaries: Vec<crate::summaries::SummaryKind>,

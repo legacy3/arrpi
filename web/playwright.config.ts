@@ -23,4 +23,5 @@ export default defineConfig({
     baseURL: process.env.ARRPI_WEB_TEST_URL ?? "http://127.0.0.1:4173",
     screenshot: "only-on-failure",
   },
+  workers: 4,
 });

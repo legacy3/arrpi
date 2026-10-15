@@ -521,6 +521,9 @@
       "CommandCatalog": {
         "description": "HTTP command discovery shares names, schemas and effects with protocol adapters.",
         "properties": {
+          "account": {
+            "type": ["string", "null"]
+          },
           "tools": {
             "items": {
               "$ref": "#/components/schemas/CommandDescriptor"
@@ -528,7 +531,7 @@
             "type": "array"
           }
         },
-        "required": ["tools"],
+        "required": ["tools", "account"],
         "type": "object"
       },
       "CommandDescriptor": {
@@ -560,6 +563,9 @@
           },
           "name": {
             "type": "string"
+          },
+          "source": {
+            "type": ["string", "null"]
           }
         },
         "required": ["name", "description", "inputSchema", "annotations"],
@@ -1290,6 +1296,9 @@
       "SourceInfo": {
         "description": "A visible source and its capabilities, without its connection credentials.",
         "properties": {
+          "account": {
+            "type": "boolean"
+          },
           "calendar": {
             "type": "boolean"
           },
@@ -1318,6 +1327,7 @@
         "required": [
           "name",
           "kind",
+          "account",
           "endpoints",
           "calendar",
           "summaries",
@@ -1611,7 +1621,7 @@
   },
   "info": {
     "title": "ArrPi public API",
-    "version": "0.1.3"
+    "version": "0.1.4"
   },
   "openapi": "3.1.0",
   "paths": {}

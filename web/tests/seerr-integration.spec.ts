@@ -276,16 +276,36 @@ test("fictional season requests and owned issues stay consistent across tools", 
       status: 2,
       status_name: "resolved",
     });
-    const mine = await tool(request, origin, accountKey, "list_issues", {
-      no_cache: true,
-    });
+    let offset = 0;
+    let found = false;
 
-    expect(mine.response.ok()).toBe(true);
-    expect(mine.data.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ issue_id: issueId, status_name: "resolved" }),
-      ]),
-    );
+    while (!found) {
+      const mine = await tool(request, origin, accountKey, "list_issues", {
+        no_cache: true,
+        offset,
+      });
+
+      expect(mine.response.ok()).toBe(true);
+      const items = mine.data.items as {
+        issue_id: number;
+        status_name: string;
+      }[];
+
+      found = items.some(
+        (issue) =>
+          issue.issue_id === issueId && issue.status_name === "resolved",
+      );
+      const next = mine.data.next_offset;
+
+      if (found || typeof next !== "number") {
+        break;
+      }
+
+      expect(next).toBeGreaterThan(offset);
+      offset = next;
+    }
+
+    expect(found).toBe(true);
     const links = await tool(
       request,
       origin,

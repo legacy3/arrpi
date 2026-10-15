@@ -27,7 +27,7 @@ test("large Explorer responses scroll inside the output instead of growing the p
   await expect(
     page.getByRole("combobox", { exact: true, name: "Source" }),
   ).toBeFocused();
-  await page.getByRole("combobox", { exact: true, name: "Endpoint" }).click();
+  await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
   await page.getByRole("option", { exact: true, name: "series" }).click();
   await page.getByRole("button", { exact: true, name: "Fetch" }).click();
   const output = page.getByLabel("Native JSON response", { exact: true });

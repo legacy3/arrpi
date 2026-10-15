@@ -1,14 +1,12 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Code, Play, RefreshCw } from "lucide-react";
+import { Play } from "lucide-react";
 import { useState } from "react";
 
 import type { Api } from "@/lib/api";
-import type { Components } from "@/lib/generated/contracts";
+import type { Command } from "@/lib/explorer";
 
-import { Choice } from "@/components/choice";
-import { EmptyState } from "@/components/empty-state";
 import { JsonResponse } from "@/components/json-response";
 import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
@@ -18,86 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { HttpError } from "@/lib/api";
-import { useApiQuery } from "@/lib/use-api-query";
 
-type Command = Components["schemas"]["CommandDescriptor"];
-
-export function CommandExplorer({ api }: Readonly<{ api: Api }>) {
-  const query = useApiQuery<Components["schemas"]["CommandCatalog"]>(
-    api,
-    "/v1/tools",
-  );
-  const [selected, setSelected] = useState("");
-  const commands = query.data?.data.tools ?? [];
-  const command =
-    commands.find((item) => item.name === selected) ?? commands[0];
-  let content = (
-    <EmptyState
-      icon={Code}
-      loading={query.isFetching}
-      title={query.isFetching ? "Loading commands…" : "No permitted commands"}
-    />
-  );
-
-  if (command && !query.error) {
-    content = (
-      <>
-        <div className="grid gap-2 border-t p-5">
-          <Label htmlFor="explorer-command">Command</Label>
-          <Choice
-            id="explorer-command"
-            label="Command"
-            value={command.name}
-            onChange={setSelected}
-            options={commands.map((item) => ({
-              label: item.name,
-              value: item.name,
-            }))}
-            className="w-full sm:w-72"
-          />
-        </div>
-        <CommandForm key={command.name} api={api} command={command} />
-      </>
-    );
-  }
-
-  return (
-    <Panel
-      title="Shared commands"
-      detail={
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={query.isFetching}
-          aria-label="Refresh available commands"
-          onClick={() => query.refresh()}
-        >
-          <RefreshCw className="size-3.5" />
-        </Button>
-      }
-    >
-      {query.error ? (
-        <div className="px-5 pb-5">
-          <Notice
-            tone={
-              query.error instanceof HttpError && query.error.status === 404
-                ? "info"
-                : "error"
-            }
-          >
-            {query.error instanceof HttpError && query.error.status === 404
-              ? "Shared commands require an enabled MCP service and a configured Seerr connection. Operational summaries remain available independently."
-              : query.error.message}
-          </Notice>
-        </div>
-      ) : (
-        content
-      )}
-    </Panel>
-  );
-}
-
-function CommandForm({
+export function CommandForm({
   api,
   command,
 }: Readonly<{ api: Api; command: Command }>) {
@@ -136,8 +56,13 @@ function CommandForm({
         void client.invalidateQueries({
           predicate: (query) =>
             typeof query.queryKey[0] === "string" &&
-            ["/v1/summaries/", "/v1/calendar", "/v1/config/mcp/"].some(
-              (prefix) => query.queryKey[0]?.toString().startsWith(prefix),
+            [
+              "/v1/summaries/",
+              "/v1/sources/",
+              "/v1/calendar",
+              "/v1/config/mcp/",
+            ].some((prefix) =>
+              query.queryKey[0]?.toString().startsWith(prefix),
             ),
         });
       }
@@ -152,9 +77,9 @@ function CommandForm({
   }
 
   return (
-    <>
+    <Panel>
       <form
-        className="grid gap-4 border-t p-5"
+        className="grid gap-4 p-5"
         onSubmit={(event) => {
           event.preventDefault();
 
@@ -169,7 +94,7 @@ function CommandForm({
             /v1/tools/{command.name}
           </code>
           <Badge variant={readOnly ? "secondary" : "outline"}>
-            {readOnly ? "Read only" : "Writes to Seerr"}
+            {readOnly ? "Read only" : `Writes to ${command.source ?? "source"}`}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">{command.description}</p>
@@ -215,7 +140,7 @@ function CommandForm({
                 onCheckedChange={(value) => setConfirmed(value === true)}
               />
               <Label htmlFor="command-confirm">
-                Apply this change to my Seerr account
+                Apply this change to my account
               </Label>
             </div>
           )}
@@ -233,6 +158,6 @@ function CommandForm({
       {mutation.error instanceof HttpError && mutation.error.data !== null && (
         <JsonResponse label="JSON error response" value={mutation.error.data} />
       )}
-    </>
+    </Panel>
   );
 }

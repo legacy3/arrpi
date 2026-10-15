@@ -216,6 +216,7 @@ export interface components {
     };
     /** @description HTTP command discovery shares names, schemas and effects with protocol adapters. */
     CommandCatalog: {
+      account: string | null;
       tools: components["schemas"]["CommandDescriptor"][];
     };
     /** @description A command description retains the shared immutable schema allocation. */
@@ -229,6 +230,7 @@ export interface components {
       description: string;
       inputSchema: components["schemas"]["InputSchema"];
       name: string;
+      source?: string | null;
     };
     /** @description Receipt for an applied revision; listener changes require a process restart. */
     ConfigUpdateResult: {
@@ -557,6 +559,7 @@ export interface components {
     SourceAvailability: "ok" | "unavailable";
     /** @description A visible source and its capabilities, without its connection credentials. */
     SourceInfo: {
+      account: boolean;
       calendar: boolean;
       counters: components["schemas"]["Counters"];
       endpoints: components["schemas"]["Endpoint"][];

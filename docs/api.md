@@ -64,7 +64,9 @@ They grant no JSON, native, status, metrics or issuance access. Arbitrary query-
 credentials remain rejected. Without dates, personal subscriptions roll forward daily;
 an explicit bounded date window remains fixed.
 
-Calendar queries require both dates and allow at most 93 days. `start` and `end` are
+Calendar queries require both dates and allow at most 93 days. Combined results
+are limited to 8192 events; `calendar_too_large` means to request a shorter range.
+`start` and `end` are
 inclusive days for the normalized calendar. Upstream calendar calls enforce
 `unmonitored=false` and include series metadata. Queue pagination accepts `page` and
 `pageSize`, each from 1 through 100. Unknown or repeated query parameters are rejected.

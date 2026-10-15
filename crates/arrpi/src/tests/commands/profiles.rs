@@ -415,12 +415,20 @@ pub(super) async fn raw(
 pub(super) fn fault(state: &super::Native, path: &str) -> Option<super::Response> {
     use super::native_json;
 
-    if (path == "/api/v1/status" && state.fail_status.load(Ordering::Relaxed))
-        || (path == "/api/v1/auth/me" && state.fail_identity.load(Ordering::Relaxed))
-    {
+    if path == "/api/v1/status" && state.fail_status.load(Ordering::Relaxed) {
         return Some(native_json(
             StatusCode::SERVICE_UNAVAILABLE,
             &json!({"message":"private detail"}),
+        ));
+    }
+
+    if path == "/api/v1/auth/me" && state.identity_status.load(Ordering::Relaxed) != 200 {
+        return Some(native_json(
+            StatusCode::from_u16(
+                u16::try_from(state.identity_status.load(Ordering::Relaxed)).expect("status"),
+            )
+            .expect("status"),
+            &json!({"message":"private identity error"}),
         ));
     }
 

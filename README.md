@@ -112,7 +112,7 @@ cargo run --locked -p arrpi -- config key --database .arrpi/arrpi.sqlite
 
 ## MCP
 
-Requests and issues are enabled only for **Seerr 3.5.0**; other versions support reads only. MCP accounts need **Plex-bound Seerr users**. Local, Jellyfin and Emby accounts are not supported yet.
+Requests and issues support stable **Seerr >=3.5.0, <4.0.0** releases. MCP accounts need **Plex-bound Seerr users**. Local, Jellyfin and Emby accounts are not supported yet.
 
 1. Add Seerr and bind each ArrPi account to its Seerr user in **Settings**.
 2. Enable the server under **Settings → MCP**. Tool switches and limits are here too.

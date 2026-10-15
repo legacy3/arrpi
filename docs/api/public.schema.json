@@ -7,10 +7,7 @@
           "actor_id": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "created_at": {
             "type": "string"
@@ -55,10 +52,7 @@
           "next_offset": {
             "format": "uint",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "offset": {
             "format": "uint",
@@ -71,13 +65,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "client",
-          "items",
-          "total",
-          "offset",
-          "next_offset"
-        ],
+        "required": ["client", "items", "total", "offset", "next_offset"],
         "type": "object"
       },
       "AuditTarget": {
@@ -86,18 +74,12 @@
           "episode": {
             "format": "uint32",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "issue_id": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "media_type": {
             "anyOf": [
@@ -112,18 +94,12 @@
           "request_id": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "season": {
             "format": "uint32",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "seasons": {
             "items": {
@@ -131,18 +107,12 @@
               "minimum": 0,
               "type": "integer"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "tmdb_id": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           }
         },
         "type": "object"
@@ -190,10 +160,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "plex_id"
-        ],
+        "required": ["id", "plex_id"],
         "type": "object"
       },
       "CachePolicy": {
@@ -313,11 +280,7 @@
       },
       "CacheState": {
         "description": "Cache provenance, distinct from current upstream reachability.",
-        "enum": [
-          "hit",
-          "miss",
-          "stale"
-        ],
+        "enum": ["hit", "miss", "stale"],
         "type": "string"
       },
       "Calendar": {
@@ -336,10 +299,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "events",
-          "sources"
-        ],
+        "required": ["events", "sources"],
         "type": "object"
       },
       "CalendarEvent": {
@@ -351,10 +311,7 @@
           "episode": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "has_file": {
             "type": "boolean"
@@ -365,10 +322,7 @@
             "type": "integer"
           },
           "imdb_id": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "kind": {
             "$ref": "#/components/schemas/EventKind"
@@ -376,16 +330,10 @@
           "season": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "series": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "source": {
             "type": "string"
@@ -396,35 +344,20 @@
           "tmdb_id": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "tvdb_id": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           }
         },
-        "required": [
-          "source",
-          "id",
-          "title",
-          "kind",
-          "date",
-          "has_file"
-        ],
+        "required": ["source", "id", "title", "kind", "date", "has_file"],
         "type": "object"
       },
       "CleanupBytesScope": {
         "description": "Byte totals only include successful delete actions with a recorded size.",
-        "enum": [
-          "successful_delete_actions_with_known_sizes"
-        ],
+        "enum": ["successful_delete_actions_with_known_sizes"],
         "type": "string"
       },
       "CleanupCounts": {
@@ -473,9 +406,7 @@
       },
       "CleanupScope": {
         "description": "Counts accumulate across successful handled actions.",
-        "enum": [
-          "cumulative"
-        ],
+        "enum": ["cumulative"],
         "type": "string"
       },
       "CleanuparrSummary": {
@@ -498,10 +429,7 @@
           "replacement_count": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "searches": {
             "$ref": "#/components/schemas/SearchCounts"
@@ -551,12 +479,7 @@
             "default": null
           }
         },
-        "required": [
-          "name",
-          "key",
-          "permissions",
-          "seerr_user"
-        ],
+        "required": ["name", "key", "permissions", "seerr_user"],
         "type": "object"
       },
       "CollectionCounts": {
@@ -605,9 +528,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "tools"
-        ],
+        "required": ["tools"],
         "type": "object"
       },
       "CommandDescriptor": {
@@ -641,12 +562,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "description",
-          "inputSchema",
-          "annotations"
-        ],
+        "required": ["name", "description", "inputSchema", "annotations"],
         "type": "object"
       },
       "ConfigUpdateResult": {
@@ -661,10 +577,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "revision",
-          "restart_required"
-        ],
+        "required": ["revision", "restart_required"],
         "type": "object"
       },
       "ConnectionHealth": {
@@ -673,10 +586,7 @@
           "health_issue_count": {
             "format": "uint",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "source": {
             "type": "string"
@@ -685,11 +595,7 @@
             "$ref": "#/components/schemas/ConnectionState"
           }
         },
-        "required": [
-          "source",
-          "status",
-          "health_issue_count"
-        ],
+        "required": ["source", "status", "health_issue_count"],
         "type": "object"
       },
       "ConnectionState": {
@@ -727,19 +633,11 @@
             "type": "integer"
           }
         },
-        "required": [
-          "hits",
-          "misses",
-          "stale",
-          "upstream_failures"
-        ],
+        "required": ["hits", "misses", "stale", "upstream_failures"],
         "type": "object"
       },
       "Credential": {
-        "type": [
-          "string",
-          "null"
-        ]
+        "type": ["string", "null"]
       },
       "Endpoint": {
         "description": "Public native endpoints supported by the allowlisted gateway.",
@@ -755,12 +653,7 @@
       },
       "EventKind": {
         "description": "Calendar event type; cinema and home releases are separate events.",
-        "enum": [
-          "episode",
-          "cinema",
-          "digital",
-          "physical"
-        ],
+        "enum": ["episode", "cinema", "digital", "physical"],
         "type": "string"
       },
       "Feed": {
@@ -776,10 +669,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "title",
-          "link"
-        ],
+        "required": ["title", "link"],
         "type": "object"
       },
       "InputSchema": {
@@ -821,10 +711,7 @@
           "size_bytes": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           }
         },
         "required": [
@@ -959,18 +846,10 @@
           },
           "public_url": {
             "default": null,
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         },
-        "required": [
-          "enabled",
-          "public_url",
-          "disabled_tools",
-          "limits"
-        ],
+        "required": ["enabled", "public_url", "disabled_tools", "limits"],
         "type": "object"
       },
       "McpStatus": {
@@ -983,10 +862,7 @@
             "type": "boolean"
           },
           "connection_error": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "tools": {
             "items": {
@@ -1008,10 +884,7 @@
         "type": "object"
       },
       "MediaType": {
-        "enum": [
-          "movie",
-          "tv"
-        ],
+        "enum": ["movie", "tv"],
         "type": "string"
       },
       "OAuthIdentityBinding": {
@@ -1028,11 +901,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "issuer",
-          "subject",
-          "client"
-        ],
+        "required": ["issuer", "subject", "client"],
         "type": "object"
       },
       "OAuthPolicy": {
@@ -1058,22 +927,12 @@
             "type": "string"
           }
         },
-        "required": [
-          "enabled",
-          "issuer",
-          "required_scope",
-          "bindings"
-        ],
+        "required": ["enabled", "issuer", "required_scope", "bindings"],
         "type": "object"
       },
       "Observation": {
         "description": "Uncached reads and native cache observations have distinct meanings.",
-        "enum": [
-          "hit",
-          "miss",
-          "stale",
-          "not_cached"
-        ],
+        "enum": ["hit", "miss", "stale", "not_cached"],
         "type": "string"
       },
       "PublicFreshness": {
@@ -1082,10 +941,7 @@
           "age_seconds": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "bypass_requested": {
             "type": "boolean"
@@ -1094,34 +950,21 @@
             "$ref": "#/components/schemas/Observation"
           },
           "checked_at": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "note": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "source": {
             "type": "string"
           }
         },
-        "required": [
-          "source",
-          "cache",
-          "checked_at",
-          "bypass_requested"
-        ],
+        "required": ["source", "cache", "checked_at", "bypass_requested"],
         "type": "object"
       },
       "QueueConsistency": {
         "description": "Queue pagination is bounded but cannot provide an atomic upstream snapshot.",
-        "enum": [
-          "non_atomic_pages"
-        ],
+        "enum": ["non_atomic_pages"],
         "type": "string"
       },
       "QueueSummary": {
@@ -1161,10 +1004,7 @@
             "type": "array"
           },
           "reason": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "remaining_bytes_observed": {
             "format": "double",
@@ -1190,10 +1030,7 @@
           "total_reported": {
             "format": "uint",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           }
         },
         "required": [
@@ -1280,12 +1117,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "total",
-          "completed",
-          "failed",
-          "grabbed"
-        ],
+        "required": ["total", "completed", "failed", "grabbed"],
         "type": "object"
       },
       "SeerrConnection": {
@@ -1303,11 +1135,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "url",
-          "api_key",
-          "language"
-        ],
+        "required": ["url", "api_key", "language"],
         "type": "object"
       },
       "SettingsDocument": {
@@ -1428,10 +1256,7 @@
             "$ref": "#/components/schemas/SettingsDocument"
           }
         },
-        "required": [
-          "revision",
-          "settings"
-        ],
+        "required": ["revision", "settings"],
         "type": "object"
       },
       "Source": {
@@ -1448,29 +1273,18 @@
             "default": null,
             "format": "uint32",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "url": {
             "type": "string"
           }
         },
-        "required": [
-          "kind",
-          "seerr_server_id",
-          "url",
-          "api_key"
-        ],
+        "required": ["kind", "seerr_server_id", "url", "api_key"],
         "type": "object"
       },
       "SourceAvailability": {
         "description": "Availability of one source in a combined result.",
-        "enum": [
-          "ok",
-          "unavailable"
-        ],
+        "enum": ["ok", "unavailable"],
         "type": "string"
       },
       "SourceInfo": {
@@ -1529,10 +1343,7 @@
           "age_seconds": {
             "format": "uint64",
             "minimum": 0,
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "cache": {
             "anyOf": [
@@ -1551,10 +1362,7 @@
             "$ref": "#/components/schemas/SourceAvailability"
           }
         },
-        "required": [
-          "source",
-          "status"
-        ],
+        "required": ["source", "status"],
         "type": "object"
       },
       "Status": {
@@ -1576,12 +1384,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "config_manage",
-          "version",
-          "cache",
-          "sources"
-        ],
+        "required": ["config_manage", "version", "cache", "sources"],
         "type": "object"
       },
       "SubscriptionPolicy": {
@@ -1641,10 +1444,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "episodes",
-          "movies"
-        ],
+        "required": ["episodes", "movies"],
         "type": "object"
       },
       "Summary": {
@@ -1660,10 +1460,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "complete",
-          "sources"
-        ],
+        "required": ["complete", "sources"],
         "type": "object"
       },
       "SummaryData": {
@@ -1691,11 +1488,7 @@
       },
       "SummaryKind": {
         "description": "Each summary requires its own source grant.",
-        "enum": [
-          "queue",
-          "library",
-          "status"
-        ],
+        "enum": ["queue", "library", "status"],
         "type": "string"
       },
       "SummaryRow": {
@@ -1720,13 +1513,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "status",
-              "source",
-              "kind",
-              "data",
-              "freshness"
-            ],
+            "required": ["status", "source", "kind", "data", "freshness"],
             "type": "object"
           },
           {
@@ -1745,12 +1532,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "status",
-              "source",
-              "kind",
-              "code"
-            ],
+            "required": ["status", "source", "kind", "code"],
             "type": "object"
           }
         ]
@@ -1806,10 +1588,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "client",
-          "items"
-        ],
+        "required": ["client", "items"],
         "type": "object"
       },
       "ToolVisibility": {
@@ -1825,18 +1604,14 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "description",
-          "available"
-        ],
+        "required": ["name", "description", "available"],
         "type": "object"
       }
     }
   },
   "info": {
     "title": "ArrPi public API",
-    "version": "0.1.2"
+    "version": "0.1.3"
   },
   "openapi": "3.1.0",
   "paths": {}

@@ -71,6 +71,10 @@ Removing a binding denies subsequent requests even while the access token remain
 valid. Explicitly moving a binding changes which local account that identity uses.
 Existing requests drain under the settings revision that accepted them.
 
+Usage and write history are attributed to the local ArrPi account. Bind different
+people to separate accounts; identities mapped to one account share its grants and
+history.
+
 The CLI settings API accepts the same document. The optional root `oauth` section
 has this shape:
 

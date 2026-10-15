@@ -33,7 +33,7 @@ struct Native {
     write_status: AtomicU64,
     fail_details: AtomicBool,
     fail_status: AtomicBool,
-    fail_identity: AtomicBool,
+    identity_status: AtomicU64,
     search_status: AtomicU64,
 }
 async fn reply(State(state): State<Arc<Native>>, request: Request) -> Response {
@@ -199,7 +199,7 @@ async fn setup_options(
         write_status: AtomicU64::new(201),
         fail_details: AtomicBool::new(false),
         fail_status: AtomicBool::new(false),
-        fail_identity: AtomicBool::new(false),
+        identity_status: AtomicU64::new(200),
         search_status: AtomicU64::new(200),
     });
     let native = server(

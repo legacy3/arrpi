@@ -62,22 +62,13 @@ impl Commands {
     /// Discover currently permitted tools with fresh native account verification.
     ///
     /// # Errors
-    /// Returns disabled transport or a rejected/mismatched native actor identity.
+    /// Returns disabled transport. Unverified account tools are omitted.
     pub async fn list(&self, principal: &Principal) -> Result<Vec<ToolDefinition>, ApiError> {
         if !self.ready() {
             return Err(ApiError::NOT_FOUND);
         }
 
-        let actor = match self.actor(principal).await {
-            Ok(actor) => actor,
-            Err(
-                ApiError::UNAVAILABLE
-                | ApiError::TIMEOUT
-                | ApiError::QUEUE_TIMEOUT
-                | ApiError::UPSTREAM_RATE_LIMITED,
-            ) => None,
-            Err(error) => return Err(error),
-        };
+        let actor = self.actor(principal).await.unwrap_or(None);
         let compatible = actor.is_some() && self.compatible(principal).await.unwrap_or(false);
         let caller = Caller {
             principal,

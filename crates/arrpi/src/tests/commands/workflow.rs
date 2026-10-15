@@ -219,7 +219,7 @@ async fn source_health_remains_discoverable_during_a_seerr_outage() {
     let (api, _native, state) = setup().await;
 
     state.fail_status.store(true, Ordering::Relaxed);
-    state.fail_identity.store(true, Ordering::Relaxed);
+    state.identity_status.store(503, Ordering::Relaxed);
     let response = reqwest::Client::new()
         .get(format!("{}v1/tools", api.url))
         .bearer_auth(CLIENT_KEY)
@@ -244,6 +244,45 @@ async fn source_health_remains_discoverable_during_a_seerr_outage() {
 
     assert_eq!(value["complete"], false);
     assert_eq!(value["sources"][0]["reachable"], true);
+}
+
+#[tokio::test]
+async fn rejected_account_identity_preserves_native_discovery_across_transports() {
+    let (api, _native, state) = setup().await;
+    let remote = arrpi_adapters::remote::RemoteApi::new(&api.url, false).expect("remote");
+
+    for status in [401, 403, 404, 503] {
+        state.identity_status.store(status, Ordering::Relaxed);
+        let tools = remote.list(CLIENT_KEY).await.expect("stdio discovery");
+
+        assert!(tools.iter().any(|tool| tool.name == "list_movies"));
+        assert!(tools.iter().any(|tool| tool.name == "service_status"));
+        assert!(!tools.iter().any(|tool| tool.name == "request_movie"));
+        assert!(!tools.iter().any(|tool| tool.name == "search_media"));
+        let result =
+            response_json(super::rpc(&api, CLIENT_KEY, "tools/list", json!({})).await).await;
+
+        assert!(result.get("error").is_none(), "MCP discovery: {result}");
+        assert!(
+            result["result"]["tools"]
+                .as_array()
+                .expect("tools")
+                .iter()
+                .any(|tool| tool["name"] == "list_movies")
+        );
+        assert_eq!(
+            call(&api, CLIENT_KEY, "list_movies", json!({}))
+                .await
+                .status(),
+            StatusCode::OK
+        );
+        assert_ne!(
+            call(&api, CLIENT_KEY, "request_movie", json!({"tmdb_id":42}))
+                .await
+                .status(),
+            StatusCode::OK
+        );
+    }
 }
 
 #[tokio::test]

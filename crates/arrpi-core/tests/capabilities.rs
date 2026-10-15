@@ -56,6 +56,7 @@ fn healthy() -> Health {
 struct Probe {
     library: AtomicUsize,
     calendar: AtomicUsize,
+    calendar_events: AtomicUsize,
     health: AtomicUsize,
     modes: Mutex<Vec<ReadMode>>,
     pause_fresh: AtomicBool,
@@ -154,20 +155,22 @@ impl CalendarSource for Provider {
         }
 
         Ok(SourceRead {
-            data: vec![CalendarEvent {
-                source: self.descriptor.name.clone(),
-                id: 7,
-                title: "A funny film".into(),
-                kind: EventKind::Digital,
-                date: start.to_owned(),
-                series: None,
-                season: None,
-                episode: None,
-                tmdb_id: Some(42),
-                imdb_id: None,
-                tvdb_id: None,
-                has_file: true,
-            }],
+            data: (0..self.probe.calendar_events.load(Ordering::SeqCst).max(1))
+                .map(|index| CalendarEvent {
+                    source: self.descriptor.name.clone(),
+                    id: 7 + u64::try_from(index).expect("bounded fixture"),
+                    title: "A funny film".into(),
+                    kind: EventKind::Digital,
+                    date: start.to_owned(),
+                    series: None,
+                    season: None,
+                    episode: None,
+                    tmdb_id: Some(42),
+                    imdb_id: None,
+                    tvdb_id: None,
+                    has_file: true,
+                })
+                .collect(),
             freshness: freshness(&self.descriptor.name),
         })
     }
@@ -694,6 +697,51 @@ async fn calendar_admission_exhaustion_is_retryable_instead_of_a_partial_success
         matches!(result, Err(ApiError::BUSY)),
         "local saturation is not a successful partial calendar"
     );
+}
+
+#[tokio::test]
+async fn combined_calendar_cap_is_explicit_and_independent_of_source_completion_order() {
+    let (mut commands, mut principal) = fixture(None);
+    let probe = Arc::new(Probe::default());
+
+    probe.calendar_events.store(4096, Ordering::SeqCst);
+    commands.sources = Sources::new();
+
+    for name in ["first", "second"] {
+        commands
+            .sources
+            .insert(Provider {
+                descriptor: descriptor(name),
+                error: None,
+                probe: Arc::clone(&probe),
+            })
+            .expect("healthy calendar source");
+        principal
+            .permissions
+            .insert(format!("{name}:calendar-view").into());
+    }
+
+    let dates = || Dates {
+        start: "2026-10-15".into(),
+        end: "2026-10-16".into(),
+        no_cache: true,
+    };
+    let calendar = commands
+        .calendar(&principal, dates())
+        .await
+        .expect("exact capacity");
+
+    assert_eq!(calendar.events.len(), 8192);
+    probe.calendar_events.store(5000, Ordering::SeqCst);
+    let error = commands
+        .calendar(&principal, dates())
+        .await
+        .expect_err("combined cap");
+
+    assert_eq!(error, ApiError::CALENDAR_TOO_LARGE);
+    assert_eq!(error.code(), "calendar_too_large");
+    assert!(error.to_string().contains("shorter date range"));
+    assert_eq!(ApiError::from_payload(&error.payload()), Some(error));
 }
 
 #[tokio::test]

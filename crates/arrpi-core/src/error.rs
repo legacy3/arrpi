@@ -53,6 +53,8 @@ enum ErrorKind {
         "upstream response exceeds cache.max_body_bytes; raise the configured limit for a larger library"
     )]
     ResponseTooLarge,
+    #[error("combined calendar exceeds 8192 events; request a shorter date range")]
+    CalendarTooLarge,
     #[error("invalid upstream response")]
     InvalidResponse,
     #[error("invalid upstream JSON at line {line}, column {column}")]
@@ -90,6 +92,7 @@ impl ApiError {
     pub const UPSTREAM_RATE_LIMITED: Self = Self(ErrorKind::UpstreamRateLimited);
     pub const REJECTED: Self = Self(ErrorKind::Rejected);
     pub const RESPONSE_TOO_LARGE: Self = Self(ErrorKind::ResponseTooLarge);
+    pub const CALENDAR_TOO_LARGE: Self = Self(ErrorKind::CalendarTooLarge);
     pub const INVALID_RESPONSE: Self = Self(ErrorKind::InvalidResponse);
     pub const INTERRUPTED: Self = Self(ErrorKind::Interrupted);
     pub const INTERNAL: Self = Self(ErrorKind::Internal);
@@ -189,6 +192,7 @@ impl ApiError {
             | ErrorKind::Timeout
             | ErrorKind::UpstreamBadQuery
             | ErrorKind::ResponseTooLarge
+            | ErrorKind::CalendarTooLarge
             | ErrorKind::Rejected
             | ErrorKind::InvalidResponse
             | ErrorKind::InvalidJson { .. } => 502,
@@ -205,6 +209,7 @@ impl ApiError {
             ErrorKind::UpstreamBadQuery => "upstream_invalid_arguments",
             ErrorKind::UpstreamRateLimited => "upstream_rate_limited",
             ErrorKind::ResponseTooLarge => "upstream_response_too_large",
+            ErrorKind::CalendarTooLarge => "calendar_too_large",
             ErrorKind::InvalidResponse => "invalid_upstream_response",
             ErrorKind::InvalidJson { .. } => "invalid_upstream_json",
             ErrorKind::Internal => "internal_error",
@@ -303,6 +308,7 @@ const PUBLIC_ERRORS: &[ApiError] = &[
     ApiError::UPSTREAM_BAD_QUERY,
     ApiError::UPSTREAM_RATE_LIMITED,
     ApiError::RESPONSE_TOO_LARGE,
+    ApiError::CALENDAR_TOO_LARGE,
     ApiError::UNAVAILABLE,
     ApiError::REJECTED,
     ApiError::PROFILE_UNAVAILABLE,

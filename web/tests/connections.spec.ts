@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 
+import packageInfo from "../package.json" with { type: "json" };
 import { mockConfigEditor, test } from "./fixtures/ui";
 
 test.afterEach(async ({ page }) => {
@@ -76,9 +77,11 @@ test("connection rows report independent fresh health and retain lowercase sourc
   );
   expect(writes).toHaveLength(0);
   await expect(
-    page
-      .getByRole("banner")
-      .getByRole("link", { exact: true, includeHidden: true, name: "v0.1.2" }),
+    page.getByRole("banner").getByRole("link", {
+      exact: true,
+      includeHidden: true,
+      name: `v${packageInfo.version}`,
+    }),
   ).toHaveAttribute("href", "https://github.com/legacy3/arrpi");
   await page.mouse.move(0, 0);
   await page.screenshot({

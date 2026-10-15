@@ -76,6 +76,8 @@ async fn token(
 
     if form.get("grant_type").map(String::as_str) != Some("authorization_code")
         || form.get("client_id").map(String::as_str) != Some("fixture-client")
+        || form.get("redirect_uri").map(String::as_str)
+            != Some("https://client.example.test/callback")
         || form.get("code").map(String::as_str) != Some("throwaway-authorization-code")
         || grant != Some((challenge, form.get("resource").cloned().unwrap_or_default()))
     {
@@ -225,6 +227,7 @@ fn grant_body(code: &str, verifier: &str) -> String {
         .extend_pairs([
             ("grant_type", "authorization_code"),
             ("client_id", "fixture-client"),
+            ("redirect_uri", "https://client.example.test/callback"),
             ("code", code),
             ("code_verifier", verifier),
             ("resource", RESOURCE),

@@ -80,7 +80,11 @@ fn append(
     result: Result<crate::source::SourceRead<Vec<crate::contracts::CalendarEvent>>, ApiError>,
 ) -> Result<(), ApiError> {
     match result {
-        Ok(read) if calendar.events.len().saturating_add(read.data.len()) <= 8192 => {
+        Ok(read) => {
+            if calendar.events.len().saturating_add(read.data.len()) > 8192 {
+                return Err(ApiError::CALENDAR_TOO_LARGE);
+            }
+
             calendar.events.extend(read.data);
             calendar.sources.push(SourceStatus {
                 source,

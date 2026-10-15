@@ -5,6 +5,7 @@ mod issues;
 pub(crate) mod links;
 pub(crate) mod model;
 mod requests;
+mod version;
 
 use crate::{
     budget::Budget,
@@ -104,7 +105,9 @@ impl Backend {
             )
             .await?;
 
-        Ok(status.get("version").and_then(Value::as_str) == Some("3.5.0"))
+        Ok(version::supports_writes(
+            status.get("version").and_then(Value::as_str),
+        ))
     }
 
     async fn write_identity(&self, binding: &Binding) -> Result<Actor, ApiError> {

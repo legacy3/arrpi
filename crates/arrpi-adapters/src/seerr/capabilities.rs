@@ -114,7 +114,7 @@ impl ApiSource for Backend {
             reachable: Some(true),
             version: value["version"].as_str().map(str::to_owned),
             health_issue_count: None,
-            writes_supported: Some(value["version"] == "3.5.0"),
+            writes_supported: Some(super::version::supports_writes(value["version"].as_str())),
             needs_account: false,
             freshness: Some(value.freshness),
         })

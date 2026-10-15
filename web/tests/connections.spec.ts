@@ -78,7 +78,7 @@ test("connection rows report independent fresh health and retain lowercase sourc
   await expect(
     page
       .getByRole("banner")
-      .getByRole("link", { exact: true, includeHidden: true, name: "v0.1.1" }),
+      .getByRole("link", { exact: true, includeHidden: true, name: "v0.1.2" }),
   ).toHaveAttribute("href", "https://github.com/legacy3/arrpi");
   await page.mouse.move(0, 0);
   await page.screenshot({

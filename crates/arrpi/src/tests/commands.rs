@@ -1,5 +1,6 @@
 //! Actor isolation and real Seerr 3.5.0 contracts using local fake services only.
 mod profiles;
+mod versions;
 mod workflow;
 use super::{CLIENT_KEY, OTHER_KEY, Server, server};
 use crate::{config::Config, proxy::Gateway};

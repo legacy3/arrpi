@@ -1,6 +1,6 @@
 [package]
 name = "arrpi-adapters"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 rust-version.workspace = true
 description = "Native media providers, bounded HTTP and private SQLite persistence"
@@ -24,6 +24,7 @@ reqwest = { workspace = true, features = ["rustls-tls-native-roots", "stream"] }
 rusqlite = { workspace = true, features = ["bundled"] }
 rusqlite_migration.workspace = true
 secrecy.workspace = true
+semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 sha2.workspace = true

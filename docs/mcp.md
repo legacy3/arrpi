@@ -51,8 +51,11 @@ keeps approval, quotas, requester tags and default services/profiles. Fresh dupl
 select another user, 4K, a raw profile/server/root folder ID, tags or quota bypass. TV requests require
 explicit distinct positive seasons and report accepted/skipped seasons. Fresh preflight
 checks identity, availability, seasons and quotas. Accepted requests are not completed
-downloads. Supported write contract: Seerr 3.5.0, pinned in the native type bundles;
-other versions retain validated reads but disable mutations until tested.
+downloads. Writes support stable Seerr releases `>=3.5.0, <4.0.0`. The pinned 3.5.0 native
+bundle records the tested baseline; compatible patch and minor updates do not
+disable requests. Older, prerelease, unknown and new-major versions retain reads
+but disable mutations pending adapter validation. Every write still verifies the
+account identity and current native permissions.
 
 `request_profiles` lists safe named movie/TV profiles from Seerr's current default non-4K service. Omit `profile` or pass null to keep Default; a real profile named "Default" is still a normal named choice. Single requests and each batch item accept the same optional exact name. Explicit selection requires native REQUEST_ADVANCED, MANAGE_REQUESTS or ADMIN permission, rechecked fresh. Set the associated source's **Seerr server ID (profile selection)** in general Settings; IDs may be zero, are scoped by app kind and cannot be assigned twice. ArrPi never guesses this association. Missing mapping leaves Default available.
 

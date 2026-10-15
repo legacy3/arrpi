@@ -9,7 +9,8 @@ use crate::{
 };
 use async_trait::async_trait;
 use bytes::Bytes;
-use serde::Serialize;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -68,31 +69,47 @@ pub struct Freshness {
 }
 
 impl Freshness {
+    /// Typed provenance shared by normalized response documents.
+    #[must_use]
+    pub fn document(&self, bypass_requested: bool) -> PublicFreshness {
+        PublicFreshness {
+            source: self.source.clone(),
+            cache: self.cache,
+            checked_at: self.checked_at.clone(),
+            age_seconds: self.age_seconds,
+            note: self.note.map(str::to_owned),
+            bypass_requested,
+        }
+    }
+
     /// Render source provenance for public tools without copying native data.
     #[must_use]
     pub fn public(&self, bypass_requested: bool) -> Value {
-        let mut value = serde_json::json!({"source":self.source,"cache":self.cache,"checked_at":self.checked_at,"bypass_requested":bypass_requested});
-
-        if let Some(age) = self.age_seconds {
-            value["age_seconds"] = serde_json::json!(age);
-        }
-
-        if let Some(note) = self.note {
-            value["note"] = serde_json::json!(note);
-        }
-
-        value
+        serde_json::json!(self.document(bypass_requested))
     }
 }
 
 /// Uncached reads and native cache observations have distinct meanings.
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Observation {
     Hit,
     Miss,
     Stale,
     NotCached,
+}
+
+/// Public observation metadata; age is omitted when an upstream does not provide it.
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
+pub struct PublicFreshness {
+    pub source: String,
+    pub cache: Observation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub age_seconds: Option<u64>,
+    pub checked_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    pub bypass_requested: bool,
 }
 
 impl From<CacheState> for Observation {

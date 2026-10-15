@@ -33,6 +33,20 @@ async fn summary_http_grants_are_separate_and_partial_results_survive_source_fai
     })).expect("settings");
     let app = router(Gateway::new(&config, tokio::time::Instant::now).expect("gateway"));
 
+    for (credential, expected) in [(CLIENT_KEY, json!(["library"])), (OTHER_KEY, json!([]))] {
+        let response = request(&app, "/v1/status", Some(credential)).await;
+        let body = to_bytes(response.into_body(), 65_536).await.expect("body");
+        let status: Value = serde_json::from_slice(&body).expect("status");
+
+        assert_eq!(status["sources"][0]["summaries"], expected);
+    }
+
+    assert_eq!(
+        state.calls.load(Ordering::Relaxed),
+        0,
+        "discovery never fetches operational data"
+    );
+
     for credential in [None, Some(OTHER_KEY)] {
         let response = request(&app, "/v1/summaries/library", credential).await;
 
@@ -77,6 +91,22 @@ async fn summary_http_grants_are_separate_and_partial_results_survive_source_fai
         StatusCode::FORBIDDEN
     );
     assert_eq!(state.calls.load(Ordering::Relaxed), 1);
+    let fresh = Request::builder()
+        .uri("/v1/summaries/library")
+        .header("authorization", format!("Bearer {CLIENT_KEY}"))
+        .header("cache-control", "no-cache")
+        .body(Body::empty())
+        .expect("fresh request");
+    let response = app.oneshot(fresh).await.expect("fresh response");
+    let body = to_bytes(response.into_body(), 65_536).await.expect("body");
+    let result: Value = serde_json::from_slice(&body).expect("JSON");
+
+    assert_eq!(result["sources"][0]["freshness"]["bypass_requested"], true);
+    assert_eq!(
+        state.calls.load(Ordering::Relaxed),
+        2,
+        "header bypass reaches the native adapter"
+    );
 }
 
 async fn request(

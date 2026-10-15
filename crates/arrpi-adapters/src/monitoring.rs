@@ -11,11 +11,10 @@ use arrpi_core::{
     contracts::Counters,
     error::ApiError,
     source::{ApiSource, Descriptor, Freshness, Health, Principal, ReadMode, SourceRead},
-    summaries::{SummaryKind, SummarySource},
+    summaries::{SummaryData, SummaryKind, SummarySource},
 };
 use async_trait::async_trait;
 use secrecy::{ExposeSecret as _, SecretString};
-use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
@@ -212,7 +211,10 @@ impl ApiSource for Monitor {
 
         Ok(Health {
             reachable: Some(true),
-            version: read.data["version"].as_str().map(str::to_owned),
+            version: match read.data {
+                SummaryData::Sabnzbd(data) => Some(data.version),
+                _ => None,
+            },
             health_issue_count: None,
             writes_supported: None,
             needs_account: false,
@@ -231,7 +233,7 @@ impl SummarySource for Monitor {
         &self,
         kind: SummaryKind,
         mode: ReadMode,
-    ) -> Result<SourceRead<Value>, ApiError> {
+    ) -> Result<SourceRead<SummaryData>, ApiError> {
         if !self.supports(kind) {
             return Err(ApiError::NOT_FOUND);
         }

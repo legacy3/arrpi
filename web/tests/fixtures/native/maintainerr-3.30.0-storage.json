@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-10-15T12:00:00Z",
+  "cleanupTotals": {
+    "bytesHandled": 12884901888,
+    "episodesHandled": 0,
+    "itemsHandled": 4,
+    "moviesHandled": 4,
+    "seasonsHandled": 0,
+    "showsHandled": 0,
+    "movieBytesHandled": 12884901888,
+    "showBytesHandled": 0,
+    "seasonBytesHandled": 0,
+    "episodeBytesHandled": 0
+  },
+  "collectionSummary": {
+    "activeSizeBytes": 8589934592,
+    "reclaimableCount": 4,
+    "reclaimableSizedCount": 2,
+    "reclaimableUsingFallback": true,
+    "inactiveCount": 0,
+    "totalCollectionCount": 4,
+    "movieSizeBytes": 8589934592,
+    "showSizeBytes": 0,
+    "seasonSizeBytes": 0,
+    "episodeSizeBytes": 0,
+    "reclaimableMovieCount": 4,
+    "reclaimableShowCount": 0,
+    "reclaimableSeasonCount": 0,
+    "reclaimableEpisodeCount": 0
+  }
+}

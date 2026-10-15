@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 
 import { catalog, findMedia, nativeMedia } from "./media.ts";
 import "./seerr.ts";
+import "./monitoring.ts";
 
 const station = findMedia("tv", 84);
 const lantern = findMedia("movie", 99);
@@ -45,7 +46,8 @@ for (const [kind, port] of [
       return;
     }
 
-    const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    const path = url.pathname;
     let data: unknown = [];
 
     if (path.endsWith("/calendar")) {
@@ -61,7 +63,12 @@ for (const [kind, port] of [
     }
 
     if (path.endsWith("/queue")) {
-      data = { page: 1, pageSize: 20, records: [], totalRecords: 0 };
+      data = {
+        page: Number(url.searchParams.get("page") ?? 1),
+        pageSize: Number(url.searchParams.get("pageSize") ?? 20),
+        records: [],
+        totalRecords: 0,
+      };
     }
 
     response.end(JSON.stringify(data));

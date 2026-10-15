@@ -1,0 +1,10 @@
+{
+  "queue": {
+    "kbpersec": "2048",
+    "mbleft": "1024",
+    "noofslots": 3,
+    "noofslots_total": 2,
+    "paused": false,
+    "version": "5.1.3"
+  }
+}

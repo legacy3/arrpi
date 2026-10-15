@@ -1,14 +1,22 @@
 //! Minimal authorized counters, separate from full native library and queue access.
+mod contracts;
 use crate::{
     error::ApiError,
     source::{ReadMode, SourceRead},
 };
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+
+#[rustfmt::skip]
+pub use contracts::{
+    BazarrSummary, CleanupBytesScope, CleanupCounts, CleanupScope, CleanuparrSummary,
+    CollectionCounts, LibrarySummary, MaintainerrSummary, QueueConsistency, QueueSummary,
+    SabnzbdSummary, SearchCounts, SubtitleRequirements, Summary, SummaryData, SummaryRow,
+};
 
 /// Each summary requires its own source grant.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SummaryKind {
     Queue,
@@ -17,6 +25,9 @@ pub enum SummaryKind {
 }
 
 impl SummaryKind {
+    /// Stable discovery order shared by transports and capability consumers.
+    pub const ALL: &[Self] = &[Self::Queue, Self::Library, Self::Status];
+
     /// Exact permission suffix; metadata access never implies operational access.
     #[must_use]
     pub const fn grant(self) -> &'static str {
@@ -37,5 +48,5 @@ pub trait SummarySource: std::fmt::Debug + Send + Sync {
         &self,
         kind: SummaryKind,
         mode: ReadMode,
-    ) -> Result<SourceRead<Value>, ApiError>;
+    ) -> Result<SourceRead<SummaryData>, ApiError>;
 }

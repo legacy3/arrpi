@@ -187,6 +187,7 @@ test("adding one source refreshes discovery without reconnecting", async ({
         endpoints: ["qualityprofile"],
         kind: "sonarr",
         name: "extra",
+        summaries: [],
       });
     }
 
@@ -328,10 +329,11 @@ test("removing an unreferenced source requires confirmation and supports conflic
   await expect(
     page.getByRole("heading", { exact: true, name: "Connections" }),
   ).toBeVisible();
-  expect(mock.writes.at(-1)?.settings.sources).toEqual({
-    radarr: original.sources.radarr,
-    sonarr: original.sources.sonarr,
-  });
+  expect(mock.writes.at(-1)?.settings.sources).toEqual(
+    Object.fromEntries(
+      Object.entries(original.sources).filter(([name]) => name !== "unused"),
+    ),
+  );
   expect(mock.writes.at(-1)?.settings.clients).toEqual(original.clients);
 });
 

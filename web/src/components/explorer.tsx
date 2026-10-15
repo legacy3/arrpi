@@ -1,10 +1,13 @@
 "use client";
 
 import { Code, Play } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { Choice } from "@/components/choice";
 import { EmptyState } from "@/components/empty-state";
+import { CommandExplorer } from "@/components/explorer-commands";
+import { SummaryExplorer } from "@/components/explorer-summaries";
+import { JsonResponse } from "@/components/json-response";
 import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   type Api,
   currentMonth,
@@ -21,6 +23,7 @@ import {
   type Source,
   type Status,
 } from "@/lib/api";
+import { summaryKinds } from "@/lib/summaries";
 import { useApiQuery } from "@/lib/use-api-query";
 
 export function Explorer({
@@ -28,25 +31,48 @@ export function Explorer({
   status,
 }: Readonly<{ api: Api; status: Status }>) {
   const sources = status.sources.filter((item) => item.endpoints.length > 0);
+  const summaries = summaryKinds(status.sources);
+  const interfaces = [
+    ...(sources.length > 0
+      ? [{ label: "Native endpoints", value: "native" }]
+      : []),
+    ...(summaries.length > 0
+      ? [{ label: "Operational summaries", value: "summaries" }]
+      : []),
+    { label: "Shared commands", value: "commands" },
+  ];
+  const [selected, setSelected] = useState(interfaces[0]?.value ?? "commands");
+  const view = interfaces.some((item) => item.value === selected)
+    ? selected
+    : interfaces[0]?.value;
   const [sourceName, setSourceName] = useState(sources[0]?.name ?? "");
   const source = sources.find((item) => item.name === sourceName) ?? sources[0];
 
-  if (!source) {
-    return (
-      <Panel>
-        <EmptyState icon={Code} title="No native endpoints" />
-      </Panel>
-    );
-  }
-
   return (
-    <NativeExplorer
-      api={api}
-      source={source.name}
-      sources={sources}
-      endpoints={source.endpoints}
-      onSourceChange={setSourceName}
-    />
+    <>
+      <div className="flex flex-wrap items-center gap-3">
+        <Label htmlFor="explorer-interface">Interface</Label>
+        <Choice
+          id="explorer-interface"
+          label="Interface"
+          value={view ?? "commands"}
+          onChange={setSelected}
+          options={interfaces}
+          className="w-56"
+        />
+      </div>
+      {view === "commands" && <CommandExplorer api={api} />}
+      {view === "summaries" && <SummaryExplorer api={api} kinds={summaries} />}
+      {view === "native" && source && (
+        <NativeExplorer
+          api={api}
+          source={source.name}
+          sources={sources}
+          endpoints={source.endpoints}
+          onSourceChange={setSourceName}
+        />
+      )}
+    </>
   );
 }
 
@@ -76,10 +102,6 @@ function NativeExplorer({
   });
   const match = requested.startsWith(`${path}?`);
   const response = match ? query.data : undefined;
-  const prettyResponse = useMemo(
-    () => (response ? JSON.stringify(response.data, null, 2) : ""),
-    [response],
-  );
   const fetching = match && query.isFetching;
   const error = validationError || (match ? query.error?.message : "");
 
@@ -234,13 +256,7 @@ function NativeExplorer({
         </div>
       )}
       {!error && response && (
-        <Textarea
-          readOnly
-          wrap="off"
-          value={prettyResponse}
-          aria-label="Native JSON response"
-          className="h-80 max-h-[70vh] field-sizing-fixed w-full resize-y overflow-auto rounded-none rounded-b-xl border-0 bg-background/30 p-5 font-mono text-xs leading-7 text-emerald-100/80 shadow-none focus-visible:ring-inset"
-        />
+        <JsonResponse label="Native JSON response" value={response.data} />
       )}
       {!error && !response && (
         <EmptyState

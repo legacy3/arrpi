@@ -74,14 +74,20 @@ impl Fixture {
     }
 
     async fn queue(&self) -> Result<SourceRead<Value>, ApiError> {
-        self.built
+        let read = self
+            .built
             .sources
             .source("test")
             .expect("source")
             .summaries()
             .expect("queue capability")
             .summary(SummaryKind::Queue, ReadMode::Cached)
-            .await
+            .await?;
+
+        Ok(SourceRead {
+            data: serde_json::to_value(read.data)?,
+            freshness: read.freshness,
+        })
     }
 }
 

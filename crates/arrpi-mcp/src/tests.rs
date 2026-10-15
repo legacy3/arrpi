@@ -84,6 +84,15 @@ fn sdk_projection_preserves_discovery_schema_and_protocol_hints() {
         let wire = serde_json::to_value(crate::describe(definition.clone()))
             .expect("SDK tool serialization");
 
+        let http = serde_json::to_value(arrpi_core::registry::CommandDescriptor::from(
+            definition.clone(),
+        ))
+        .expect("HTTP command serialization");
+
+        assert_eq!(
+            wire, http,
+            "HTTP and MCP discovery must describe the same command"
+        );
         assert_eq!(wire["name"], id.name());
         assert_eq!(
             wire["inputSchema"],

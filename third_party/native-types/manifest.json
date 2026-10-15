@@ -37,6 +37,77 @@
       "sha256": "9533fc4ce04a5e68ef3d7c2deef5a25c43b560dbde07c361eb0f736fce66bf56",
       "license": "MIT",
       "license_file": "LICENSE.Seerr"
+    },
+    {
+      "name": "bazarr-1.6.2-api",
+      "app": "bazarr",
+      "app_release": "1.6.2",
+      "api_version": "unversioned",
+      "repository": "morpheus65535/bazarr",
+      "commit": "8c68f16a1e12f8e7985baeb73fb4199b5149108a",
+      "source_path": "bazarr/api/__init__.py",
+      "source_format": "swagger2",
+      "license": "GPL-3.0",
+      "license_file": "LICENSE.Bazarr",
+      "capture": {
+        "image": "lscr.io/linuxserver/bazarr@sha256:c1673816321156b904af9b7e6415ea547ae9622e4acc375358f1e1eb9ed1e904",
+        "endpoint": "http://127.0.0.1:6767/api/swagger.json"
+      },
+      "declarations": [
+        {
+          "source_path": "frontend/src/types/api.d.ts",
+          "exports": [
+            "Badge"
+          ],
+          "path": "sources/bazarr-1.6.2-api-models.ts",
+          "sha256": "5d78149210e61a465d315341d288fcb6b667a6af077eca5ef122e3dd7b813b17"
+        }
+      ],
+      "sha256": "e1e9852670f9e2d800742aac40825aaf62c61f991d827f07cd8c7fb66e5d72ac"
+    },
+    {
+      "name": "maintainerr-3.30.0-api",
+      "app": "maintainerr",
+      "app_release": "3.30.0",
+      "api_version": "unversioned",
+      "repository": "Maintainerr/Maintainerr",
+      "commit": "78ee15578f25493fea7196a0e4d9780d10f7460d",
+      "source_path": "apps/server/src/main.ts",
+      "license": "MIT",
+      "license_file": "LICENSE.Maintainerr",
+      "capture": {
+        "image": "ghcr.io/maintainerr/maintainerr@sha256:8251a1f0ba5d71acc878846a727fba566ec87cbfbf6a914fb881a5953af53d46",
+        "endpoint": "http://127.0.0.1:6246/api/swagger-json"
+      },
+      "declarations": [
+        {
+          "source_path": "packages/contracts/src/storage-metrics/index.ts",
+          "exports": [
+            "StorageCleanupTotals",
+            "StorageCollectionSummary"
+          ],
+          "path": "sources/maintainerr-3.30.0-api-models.ts",
+          "sha256": "6e6d584ad16708357b570ff1d93536930994449d9c90f1e1fc7ba05a47b1db3d"
+        }
+      ],
+      "sha256": "45d8f3c6b3ec3f7f41c4cfce010cecd91f22f9a72ea28fccd85eefff3dea4f3f"
+    },
+    {
+      "name": "cleanuparr-2.10.10-apiv2",
+      "app": "cleanuparr",
+      "app_release": "2.10.10",
+      "api_version": "v2",
+      "repository": "Cleanuparr/Cleanuparr",
+      "commit": "87b7a621dda520768112e0bfcd0f305da5aebc3d",
+      "source_path": "code/frontend/src/app/core/models/stats.models.ts",
+      "source_format": "typescript",
+      "exports": [
+        "JobTypeStats",
+        "StatsV2Response"
+      ],
+      "license": "GPL-3.0",
+      "license_file": "LICENSE.Cleanuparr",
+      "sha256": "832ac2742ea528e9d5aa7184a656dcf39381cc1b4acdece51c4172de5cad2d8d"
     }
   ]
 }

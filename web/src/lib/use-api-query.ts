@@ -32,16 +32,14 @@ export function useApiQuery<T>(
         : { age: null, cache: null, data: initialData, receivedAt: 0 },
     meta: { fresh: initialFresh },
     placeholderData: keepPrevious ? keepPreviousData : undefined,
-    async queryFn({
+    queryFn({
       meta,
       signal,
     }: {
       signal: AbortSignal;
       meta?: Record<string, unknown>;
     }) {
-      const response = await api.read<T>(path, meta?.fresh === true, signal);
-
-      return { ...response, receivedAt: Date.now() };
+      return api.read<T>(path, meta?.fresh === true, signal);
     },
     queryKey: [path],
     staleTime: initialData === undefined ? 0 : Infinity,

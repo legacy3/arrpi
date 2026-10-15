@@ -5,6 +5,26 @@
     "master_key": "fake-feed-master-key-0000000000000000000"
   },
   "sources": {
+    "sabnzbd": {
+      "kind": "sabnzbd",
+      "url": "http://fixtures:8080/",
+      "api_key": "fake-upstream-api-key"
+    },
+    "cleanuparr": {
+      "kind": "cleanuparr",
+      "url": "http://fixtures:8080/",
+      "api_key": "fake-upstream-api-key"
+    },
+    "bazarr": {
+      "kind": "bazarr",
+      "url": "http://fixtures:8080/",
+      "api_key": "fake-upstream-api-key"
+    },
+    "maintainerr": {
+      "kind": "maintainerr",
+      "url": "http://fixtures:8080/",
+      "api_key": ""
+    },
     "sonarr": {
       "kind": "sonarr",
       "url": "http://fixtures:8989/",
@@ -36,7 +56,15 @@
         "radarr:queue",
         "radarr:health",
         "sonarr:library-view",
-        "radarr:library-view"
+        "radarr:library-view",
+        "sonarr:library-summary",
+        "sonarr:queue-summary",
+        "radarr:library-summary",
+        "radarr:queue-summary",
+        "sabnzbd:status-view",
+        "cleanuparr:status-view",
+        "bazarr:status-view",
+        "maintainerr:status-view"
       ]
     },
     {

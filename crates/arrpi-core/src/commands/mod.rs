@@ -274,7 +274,10 @@ impl Commands {
             ToolId::QueueSummary | ToolId::LibrarySummary | ToolId::MonitoringStatus => {
                 let kind = summary_kind(tool).ok_or(ApiError::NOT_FOUND)?;
 
-                self.summaries(principal, kind, args::decode(input)?).await
+                Ok(serde_json::to_value(
+                    self.summaries(principal, kind, args::decode(input)?)
+                        .await?,
+                )?)
             }
 
             ToolId::ServiceStatus => {

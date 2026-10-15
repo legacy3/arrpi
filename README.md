@@ -2,11 +2,13 @@
 
 # ArrPi
 
-ArrPi puts [Sonarr](https://sonarr.tv/), [Radarr](https://radarr.video/) and [Seerr](https://seerr.dev/) behind a cached API, CLI and optional web UI. Build a media dashboard, follow upcoming releases or let an AI assistant search your library and request media through Seerr.
+<img src="web/public/arrpi-mark.png" alt="ArrPi pirate crab" width="96" height="96" align="right" />
+
+ArrPi connects your media services through a cached API, CLI and MCP server, with an optional web UI. Build a dashboard, follow upcoming releases or let an AI assistant search your library and request media.
 
 ## What you can do
 
-- **Dashboards:** cached library, queue and health data. Give each client a scoped key instead of sharing your apps’ API keys.
+- **Dashboards:** library, queue and monitoring summaries, with per-source freshness and failures. Give each client a scoped key instead of sharing your apps’ API keys.
 - **Calendar:** movie releases and TV episodes together, with search, filters and personal RSS/iCalendar feeds.
 - **AI assistants:** search, recommendations, movie and season requests, issues and batch tools through MCP. Each account acts as its own Seerr user.
 - **Scripts:** a JSON CLI for automation and agents.
@@ -31,7 +33,7 @@ Claude Code searches the library, checks upcoming releases, requests a movie and
 
 ## Install
 
-You need Docker with Compose v2, plus Sonarr v4, Radarr with the v3 API, or both.
+You need Docker with Compose v2 and at least one supported service: Sonarr v4, Radarr (v3 API), Seerr, SABnzbd, Bazarr, Cleanuparr or Maintainerr.
 
 ### API and CLI
 
@@ -71,7 +73,7 @@ Open `http://127.0.0.1:3000/` and enter the admin key. Add your apps’ URLs and
 
 Create client keys under **Settings → Access** and choose which sources and operations each client can use. Use these keys in dashboards and scripts. Keep the admin key for managing ArrPi.
 
-The calendar combines the connected Sonarr and Radarr libraries. **Explorer** lets you inspect API responses and request fresh upstream data. Personal RSS/iCalendar setup is covered in [feeds](docs/api.md#personal-feed-subscriptions).
+The overview shows permitted library, queue and monitoring summaries. **Explorer** covers native endpoints, operational summaries and account-scoped commands, including Seerr searches, requests and issues. The calendar combines the connected Sonarr and Radarr libraries. Personal RSS/iCalendar setup is covered in [feeds](docs/api.md#personal-feed-subscriptions).
 
 ## CLI
 

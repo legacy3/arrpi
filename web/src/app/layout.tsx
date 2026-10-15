@@ -10,7 +10,17 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   description: "Your media APIs, together.",
-  icons: { icon: "/favicon.svg" },
+  icons: {
+    apple: {
+      sizes: "180x180",
+      type: "image/png",
+      url: "/apple-touch-icon.png",
+    },
+    icon: [
+      { sizes: "32x32", type: "image/png", url: "/favicon-32.png" },
+      { sizes: "64x64", type: "image/png", url: "/favicon-64.png" },
+    ],
+  },
   title: { default: "ArrPi", template: "%s · ArrPi" },
 };
 

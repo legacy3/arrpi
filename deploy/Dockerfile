@@ -19,6 +19,8 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --froze
 
 FROM web-deps AS web-build
 ENV NEXT_TELEMETRY_DISABLED=1
+COPY third_party/native-types /build/third_party/native-types
+COPY docs/api/public.schema.json /build/docs/api/public.schema.json
 COPY web ./
 RUN pnpm build
 

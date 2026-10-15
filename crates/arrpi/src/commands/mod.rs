@@ -5,24 +5,27 @@ use crate::{
     error::{ApiError, HttpError},
     proxy::Gateway,
 };
-use arrpi_core::registry::ToolId;
+use arrpi_core::registry::{CommandCatalog, CommandDescriptor, ToolId};
 use axum::{
     Json,
     extract::{Path, State},
     http::HeaderMap,
 };
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::sync::Arc;
 
 pub(crate) async fn http_list(
     State(gateway): State<Arc<Gateway>>,
     headers: HeaderMap,
-) -> Result<Json<Value>, HttpError> {
+) -> Result<Json<CommandCatalog>, HttpError> {
     let principal = auth::authenticate(&headers, &gateway.clients)?;
     let definitions = gateway.commands.list(principal).await?;
-    let tools: Vec<_> = definitions.into_iter().map(arrpi_mcp::describe).collect();
+    let tools = definitions
+        .into_iter()
+        .map(CommandDescriptor::from)
+        .collect();
 
-    Ok(Json(json!({"tools":tools})))
+    Ok(Json(CommandCatalog { tools }))
 }
 
 pub(crate) async fn http_execute(

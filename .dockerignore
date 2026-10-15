@@ -22,3 +22,9 @@ web/tsconfig.tsbuildinfo
 web/.env*
 web/.npmrc
 web/.pnpm-store
+!third_party
+!third_party/native-types
+!third_party/native-types/**
+!docs
+!docs/api
+!docs/api/public.schema.json

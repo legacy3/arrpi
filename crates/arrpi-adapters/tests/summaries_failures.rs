@@ -84,11 +84,12 @@ async fn duplicate_queue_pages_remain_incomplete() {
         .summary(SummaryKind::Queue, ReadMode::Fresh)
         .await
         .expect("partial");
+    let data = serde_json::to_value(&result.data).expect("public summary document");
 
-    assert_eq!(result.data["complete"], false);
-    assert_eq!(result.data["reason"], "queue_changed");
-    assert_eq!(result.data["items_observed"], 100);
-    assert_eq!(result.data["remaining_bytes_observed"], 5025.0);
+    assert_eq!(data["complete"], false);
+    assert_eq!(data["reason"], "queue_changed");
+    assert_eq!(data["items_observed"], 100);
+    assert_eq!(data["remaining_bytes_observed"], 5025.0);
 }
 
 static CLOCK_OFFSET: AtomicU64 = AtomicU64::new(0);
@@ -118,14 +119,15 @@ async fn season_pack_bytes_are_counted_once_and_unknown_downloads_stay_explicit(
         .summary(SummaryKind::Queue, ReadMode::Fresh)
         .await
         .expect("queue");
+    let data = serde_json::to_value(&result.data).expect("public summary document");
 
-    assert_eq!(result.data["complete"], true);
-    assert_eq!(result.data["items_observed"], 3);
-    assert_eq!(result.data["downloads_observed"], 1);
-    assert_eq!(result.data["size_bytes_observed"], 100.5);
-    assert_eq!(result.data["remaining_bytes_observed"], 50.25);
-    assert_eq!(result.data["rows_without_download_identity"], 1);
-    assert_eq!(result.data["byte_counts_complete"], false);
+    assert_eq!(data["complete"], true);
+    assert_eq!(data["items_observed"], 3);
+    assert_eq!(data["downloads_observed"], 1);
+    assert_eq!(data["size_bytes_observed"], 100.5);
+    assert_eq!(data["remaining_bytes_observed"], 50.25);
+    assert_eq!(data["rows_without_download_identity"], 1);
+    assert_eq!(data["byte_counts_complete"], false);
 }
 
 #[tokio::test]

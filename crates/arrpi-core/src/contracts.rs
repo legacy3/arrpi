@@ -67,6 +67,7 @@ pub struct SourceInfo {
     pub kind: String,
     pub endpoints: Vec<Endpoint>,
     pub calendar: bool,
+    pub summaries: Vec<crate::summaries::SummaryKind>,
     pub counters: Counters,
 }
 

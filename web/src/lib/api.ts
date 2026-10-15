@@ -6,6 +6,7 @@ export type CalendarEvent = components["schemas"]["CalendarEvent"];
 export type Endpoint = components["schemas"]["Endpoint"];
 export type Source = components["schemas"]["SourceInfo"];
 export type Status = components["schemas"]["Status"];
+export type SummaryKind = components["schemas"]["SummaryKind"];
 
 export class Api {
   #abort = new AbortController();
@@ -26,6 +27,16 @@ export class Api {
   close() {
     this.#abort.abort();
     this.#key = "";
+  }
+
+  command<T>(name: string, input: Record<string, unknown>) {
+    return this.#request<T>(
+      `/v1/tools/${encodeURIComponent(name)}`,
+      false,
+      undefined,
+      input,
+      "POST",
+    );
   }
 
   read<T>(path: string, fresh = false, signal?: AbortSignal) {
@@ -60,12 +71,13 @@ export class Api {
     fresh: boolean,
     signal?: AbortSignal,
     body?: unknown,
+    method = body === undefined ? "GET" : "PUT",
   ) {
     const response = await fetch(path, {
       body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
       headers: this.#headers(fresh, body !== undefined),
-      method: body === undefined ? "GET" : "PUT",
+      method,
       redirect: "manual",
       signal: signal
         ? AbortSignal.any([this.#abort.signal, signal])
@@ -115,6 +127,7 @@ export class Api {
       age: response.headers.get("age"),
       cache: response.headers.get("x-arrpi-cache"),
       data: data as T,
+      receivedAt: Date.now(),
     };
   }
 }

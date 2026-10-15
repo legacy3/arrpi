@@ -2,6 +2,33 @@
 use super::{CLIENT_KEY, OTHER_KEY, Ordering, call, json, response_json, setup, setup_disabled};
 use arrpi_core::executor::CommandExecutor as _;
 use axum::http::StatusCode;
+
+#[tokio::test]
+async fn source_inventory_includes_the_bound_account_broker_without_native_reads() {
+    let (api, _native, state) = setup().await;
+    let response = reqwest::Client::new()
+        .get(format!("{}v1/status", api.url))
+        .bearer_auth(CLIENT_KEY)
+        .send()
+        .await
+        .expect("status response");
+    let inventory = response_json(response).await;
+    let broker = inventory["sources"]
+        .as_array()
+        .expect("sources")
+        .iter()
+        .find(|source| source["kind"] == "seerr")
+        .expect("account broker is visible with catalog grants");
+
+    assert_eq!(broker["endpoints"], json!([]));
+    assert_eq!(broker["summaries"], json!([]));
+    assert!(
+        state.calls.lock().await.is_empty(),
+        "metadata discovery never impersonates an account"
+    );
+    assert!(!inventory.to_string().contains("fake-seerr-key"));
+}
+
 #[tokio::test]
 async fn quota_and_independent_health_are_read_only_scoped_and_fresh() {
     let (api, _native, state) = setup().await;

@@ -42,6 +42,14 @@ def demo_responses(key):
             "stale": 0,
             "upstream_failures": 0,
         }
+    summaries = {}
+    for kind in ("library", "queue", "status"):
+        document = read_json("/v1/summaries/" + kind, key)
+        for source in document["sources"]:
+            if source["status"] == "ok":
+                source["freshness"]["cache"] = "hit"
+                source["freshness"]["age_seconds"] = 12
+        summaries["/v1/summaries/" + kind] = document
     events = [
         {
             "date": "2026-10-15T18:00:00Z",
@@ -102,6 +110,7 @@ def demo_responses(key):
         },
     ]
     return {
+        **summaries,
         "/v1/status": status,
         "/v1/config": settings,
         "/v1/calendar": {
@@ -109,6 +118,7 @@ def demo_responses(key):
             "sources": [
                 {"age_seconds": 12, "cache": "hit", "source": s["name"], "status": "ok"}
                 for s in status["sources"]
+                if s["calendar"]
             ],
         },
         "/v1/mcp/status": mcp,
@@ -168,12 +178,18 @@ def capture(output, key, replies):
                 if name != "Overview":
                     page.get_by_role("link", name=name, exact=True).click()
                 page.get_by_role("heading", name=name, exact=True).wait_for()
+                if name == "Overview":
+                    page.get_by_text("Queued jobs", exact=True).wait_for()
+                if name == "Calendar":
+                    page.get_by_text("The Last Lantern", exact=True).wait_for()
                 if name == "MCP":
                     page.get_by_text("Seerr connected", exact=True).wait_for()
                 page.wait_for_load_state("networkidle")
                 page.evaluate("document.fonts.ready")
                 path = output / (name.lower() + ".png")
-                page.screenshot(path=path, animations="disabled")
+                page.screenshot(
+                    path=path, animations="disabled", full_page=name == "Overview"
+                )
                 print(path.relative_to(ROOT) if path.is_relative_to(ROOT) else path)
         finally:
             browser.close()

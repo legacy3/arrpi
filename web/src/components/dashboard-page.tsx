@@ -54,7 +54,7 @@ export function DashboardPage({ view }: Readonly<{ view: Tab }>) {
     }
 
     case "overview": {
-      return <Overview status={status} />;
+      return <Overview api={api} status={status} />;
     }
 
     case "settings": {

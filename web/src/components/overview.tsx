@@ -1,17 +1,21 @@
 import {
   Box,
+  Captions,
   ChevronDown,
   CircleAlert,
+  Download,
   Film,
   Gauge,
   Layers,
   Plug,
   Timer,
+  Trash2,
   Tv,
 } from "lucide-react";
 
-import type { Source, Status } from "@/lib/api";
+import type { Api, Source, Status } from "@/lib/api";
 
+import { OperationalSummary } from "@/components/operational-summary";
 import { Panel } from "@/components/panel";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -23,9 +27,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { summaryKinds, summaryLabels } from "@/lib/summaries";
 import { cn } from "@/lib/utils";
 
-export function Overview({ status }: Readonly<{ status: Status }>) {
+export function Overview({
+  api,
+  status,
+}: Readonly<{ api: Api; status: Status }>) {
   const totals = status.sources.reduce(
     (total, source) => ({
       failures: total.failures + source.counters.upstream_failures,
@@ -150,6 +158,9 @@ export function Overview({ status }: Readonly<{ status: Status }>) {
           </TableBody>
         </Table>
       </Panel>
+      {summaryKinds(status.sources).map((kind) => (
+        <OperationalSummary key={kind} api={api} kind={kind} />
+      ))}
       <Card className="gap-0 py-0">
         <details className="group">
           <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
@@ -183,7 +194,11 @@ export function Overview({ status }: Readonly<{ status: Status }>) {
 }
 
 const sourceApps = {
+  bazarr: { icon: Captions, label: "Bazarr", version: null },
+  cleanuparr: { icon: Trash2, label: "Cleanuparr", version: null },
+  maintainerr: { icon: Trash2, label: "Maintainerr", version: null },
   radarr: { icon: Film, label: "Radarr", version: "API v3" },
+  sabnzbd: { icon: Download, label: "SABnzbd", version: null },
   seerr: { icon: Plug, label: "Seerr", version: "API v1" },
   sonarr: { icon: Tv, label: "Sonarr", version: "API v3" },
 };
@@ -237,7 +252,14 @@ function SourceRow({ source }: Readonly<{ source: Source }>) {
               Calendar
             </Badge>
           )}
-          {source.kind === "seerr" && <Badge variant="outline">Requests</Badge>}
+          {source.kind === "seerr" && (
+            <Badge variant="outline">Account broker</Badge>
+          )}
+          {source.summaries.map((kind) => (
+            <Badge key={kind} variant="outline">
+              {summaryLabels[kind]}
+            </Badge>
+          ))}
           {source.endpoints.length > 0 && (
             <span className="hidden text-xs text-muted-foreground sm:inline">
               {source.endpoints.length} native endpoints

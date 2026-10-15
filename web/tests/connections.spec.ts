@@ -70,13 +70,15 @@ test("connection rows report independent fresh health and retain lowercase sourc
     page.getByLabel("sonarr: Configured · Healthy", { exact: true }),
   ).toBeVisible();
   expect(observed.toSorted((left, right) => left.localeCompare(right))).toEqual(
-    ["radarr", "seerr", "sonarr"],
+    [...Object.keys(configDocument.settings.sources), "seerr"].toSorted(
+      (left, right) => left.localeCompare(right),
+    ),
   );
   expect(writes).toHaveLength(0);
   await expect(
     page
       .getByRole("banner")
-      .getByRole("link", { exact: true, includeHidden: true, name: "v0.1.0" }),
+      .getByRole("link", { exact: true, includeHidden: true, name: "v0.1.1" }),
   ).toHaveAttribute("href", "https://github.com/legacy3/arrpi");
   await page.mouse.move(0, 0);
   await page.screenshot({
@@ -120,7 +122,9 @@ test("unconfigured Seerr is not probed and HTTP failures are never displayed as 
     page.getByLabel("radarr: Configured · Check failed", { exact: true }),
   ).toBeVisible();
   expect(observed.toSorted((left, right) => left.localeCompare(right))).toEqual(
-    ["radarr", "sonarr"],
+    Object.keys(configDocument.settings.sources).toSorted((left, right) =>
+      left.localeCompare(right),
+    ),
   );
   await expect(
     page.getByText("private native failure detail", { exact: true }),

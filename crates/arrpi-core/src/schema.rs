@@ -17,6 +17,8 @@ struct Contracts {
     audit: AuditPage,
     updated: ConfigUpdateResult,
     connection_health: ConnectionHealth,
+    summary: crate::summaries::Summary,
+    commands: crate::registry::CommandCatalog,
 }
 
 /// Export public DTO schemas as `OpenAPI` components for client generation.

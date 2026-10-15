@@ -1,8 +1,9 @@
 //! One typed declaration of public commands, schemas and operation metadata.
 use crate::{arguments as args, policy::Limits};
 use schemars::{JsonSchema, schema_for};
+use serde::Serialize;
 use serde_json::{Map, Value};
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 
 macro_rules! registry {
     ($id:ident { $($variant:ident => ($name:literal, $args:ty, $description:literal, $write:literal, $fresh:literal, $native:literal, $page:literal)),+ $(,)? }) => {
@@ -97,8 +98,57 @@ pub struct ToolDefinition {
 }
 
 /// Shared schema storage, independent of a protocol adapter's allocation type.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema, Serialize)]
+#[serde(transparent)]
 pub struct InputSchema(Arc<Map<String, Value>>);
+
+/// HTTP command discovery shares names, schemas and effects with protocol adapters.
+#[derive(Debug, JsonSchema, Serialize)]
+pub struct CommandCatalog {
+    pub tools: Vec<CommandDescriptor>,
+}
+
+/// A command description retains the shared immutable schema allocation.
+#[derive(Debug, JsonSchema, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommandDescriptor {
+    pub name: Cow<'static, str>,
+    pub description: Cow<'static, str>,
+    pub input_schema: InputSchema,
+    pub annotations: BTreeMap<CommandAnnotation, bool>,
+}
+
+/// Operation effects are hints for clients; dispatch always rechecks authorization.
+#[derive(Debug, Eq, JsonSchema, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CommandAnnotation {
+    ReadOnlyHint,
+    DestructiveHint,
+    IdempotentHint,
+    OpenWorldHint,
+}
+
+impl From<ToolDefinition> for CommandDescriptor {
+    fn from(definition: ToolDefinition) -> Self {
+        let read = definition.effects.is_read_only();
+
+        Self {
+            name: definition.name,
+            description: definition.description,
+            input_schema: definition.input_schema,
+            annotations: [
+                (CommandAnnotation::ReadOnlyHint, read),
+                (
+                    CommandAnnotation::DestructiveHint,
+                    definition.effects.is_destructive(),
+                ),
+                (CommandAnnotation::IdempotentHint, read),
+                (CommandAnnotation::OpenWorldHint, true),
+            ]
+            .into(),
+        }
+    }
+}
 
 impl AsRef<Map<String, Value>> for InputSchema {
     fn as_ref(&self) -> &Map<String, Value> {

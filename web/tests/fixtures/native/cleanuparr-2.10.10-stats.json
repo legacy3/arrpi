@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-10-15T12:00:00Z",
+  "timeframeHours": 168,
+  "events": {
+    "total": 8,
+    "byType": {},
+    "bySeverity": {}
+  },
+  "strikes": {
+    "total": 3,
+    "byType": {},
+    "recovered": 1
+  },
+  "removals": {
+    "total": 8,
+    "byReason": {}
+  },
+  "cleaned": {
+    "total": 0,
+    "byReason": {}
+  },
+  "searches": {
+    "total": 6,
+    "completed": 5,
+    "failed": 1,
+    "grabbed": 4,
+    "byReason": {}
+  },
+  "jobs": {
+    "total": 6,
+    "completed": 5,
+    "failed": 1,
+    "byType": {}
+  }
+}

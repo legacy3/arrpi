@@ -27,6 +27,7 @@ const status: Status = {
       endpoints: ["calendar", "series", "queue", "health"],
       kind: "sonarr",
       name: "sonarr",
+      summaries: [],
     },
     {
       calendar: true,
@@ -34,9 +35,10 @@ const status: Status = {
       endpoints: ["calendar", "movie", "queue", "health"],
       kind: "radarr",
       name: "radarr",
+      summaries: [],
     },
   ],
-  version: "0.1.0",
+  version: "0.1.1",
 };
 const calendar: Calendar = {
   events: [
@@ -227,7 +229,7 @@ test("calendar-only key has no native explorer controls", async ({ page }) => {
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
   await expect(
-    page.getByRole("heading", { name: "No native endpoints" }),
+    page.getByRole("heading", { name: "No permitted commands" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { exact: true, name: "Fetch" }),
@@ -368,6 +370,9 @@ test("calendar rejects year zero and navigates early years without remapping", a
   await connect(page);
   await page.getByRole("link", { exact: true, name: "Calendar" }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/calendar");
+  await expect(
+    page.getByText("The Last Lantern", { exact: true }),
+  ).toBeVisible();
   const month = page.getByLabel("Month", { exact: true });
 
   await month.evaluate((element) => element.setAttribute("type", "text"));

@@ -65,12 +65,13 @@ async fn queue_traverses_pages_and_does_not_retain_titles_or_paths() {
         .summary(SummaryKind::Queue, ReadMode::Cached)
         .await
         .expect("queue");
+    let data = serde_json::to_value(&result.data).expect("public summary document");
 
-    assert_eq!(result.data["items_observed"], 125);
-    assert_eq!(result.data["complete"], true);
-    assert_eq!(result.data["remaining_bytes_observed"], 5000.0);
+    assert_eq!(data["items_observed"], 125);
+    assert_eq!(data["complete"], true);
+    assert_eq!(data["remaining_bytes_observed"], 5000.0);
     assert_eq!(calls.load(Ordering::Relaxed), 2);
-    assert!(!result.data.to_string().contains("private"));
+    assert!(!data.to_string().contains("private"));
     summary
         .summary(SummaryKind::Queue, ReadMode::Cached)
         .await
@@ -108,10 +109,11 @@ async fn excessive_queue_is_explicitly_incomplete_and_bounded() {
         .summary(SummaryKind::Queue, ReadMode::Fresh)
         .await
         .expect("bounded");
+    let data = serde_json::to_value(&result.data).expect("public summary document");
 
-    assert_eq!(result.data["items_observed"], 2000);
-    assert_eq!(result.data["complete"], false);
-    assert_eq!(result.data["reason"], "page_limit");
+    assert_eq!(data["items_observed"], 2000);
+    assert_eq!(data["complete"], false);
+    assert_eq!(data["reason"], "page_limit");
 }
 
 #[tokio::test]
@@ -144,6 +146,7 @@ async fn library_unknown_sizes_are_not_invented_and_grants_do_not_imply_each_oth
         )
         .await
         .expect("summary");
+    let result = serde_json::to_value(result).expect("public summary document");
 
     assert_eq!(result["sources"][0]["data"]["items"], 2);
     assert_eq!(result["sources"][0]["data"]["size_bytes"], Value::Null);
@@ -242,22 +245,23 @@ async fn monitoring_contracts_are_explicit_and_no_native_routes_are_exposed() {
             .summary(SummaryKind::Status, ReadMode::Fresh)
             .await
             .expect("monitor");
+        let data = serde_json::to_value(&result.data).expect("public summary document");
 
-        assert_eq!(result.data["complete"], true);
-        assert!(!result.data.to_string().contains("private"));
+        assert_eq!(data["complete"], true);
+        assert!(!data.to_string().contains("private"));
 
         if kind == "sabnzbd" {
-            assert_eq!(result.data["queued_jobs"], 7);
-            assert_eq!(result.data["active_jobs"], 4);
+            assert_eq!(data["queued_jobs"], 7);
+            assert_eq!(data["active_jobs"], 4);
         }
 
         if kind == "cleanuparr" {
-            assert_eq!(result.data["replacement_count"], Value::Null);
-            assert_eq!(result.data["searches"]["grabbed"], 2);
+            assert_eq!(data["replacement_count"], Value::Null);
+            assert_eq!(data["searches"]["grabbed"], 2);
         }
 
         if kind == "maintainerr" {
-            assert_eq!(result.data["reclaimable_uses_fallback"], true);
+            assert_eq!(data["reclaimable_uses_fallback"], true);
         }
     }
 }

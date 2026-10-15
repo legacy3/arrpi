@@ -31,7 +31,20 @@ keys to an untrusted frontend.
 The combined calendar needs `source:calendar-view`; this grants no raw calendar or
 other native endpoint access. The `metrics` permission is separate and grants
 aggregate counters across the server. `/v1/status` lists only sources granted to
-the presented key.
+the presented key. Each source includes its permitted native `endpoints`, normalized
+`summaries` (`library`, `queue`, `status`) and `calendar` access. The configured
+account broker is also visible to configuration managers and bound accounts with
+catalog, request or issue read access. Discovery does not probe upstreams or grant
+additional operations.
+
+The web overview reads only the summaries advertised for its client. Explorer has
+three interfaces: native reads, operational summaries and shared commands. Shared
+commands use `GET /v1/tools` for the current account's names, input schemas and
+read/write annotations, then `POST /v1/tools/{tool}` with JSON arguments. This is
+the same executor and policy used by MCP. Seerr actions need an account-bound
+client; configuration access alone does not impersonate the owner. Writes require
+explicit confirmation and are never automatically retried. Native reads and
+operational summaries remain usable when MCP or Seerr is not configured.
 
 Connection checks report `healthy`, `attention`, `authentication_failed`,
 `unavailable` or `unconfigured`, with an optional health-issue count. They use the
@@ -88,7 +101,7 @@ See [MCP and media requests](mcp.md) for command inputs, pagination, errors and 
 
 ## Operational summaries
 
-Summary reads work independently of MCP. Add a source in Settings and grant the exact operation needed; ordinary library/calendar access does not grant queue or monitoring data. `?no_cache=true` requires fresh upstream reads. Equivalent CLI/MCP tools are `queue_summary`, `library_summary` and `monitoring_status`.
+Summary reads work independently of MCP. Add a source in Settings and grant the exact operation needed; ordinary library/calendar access does not grant queue or monitoring data. `?no_cache=true` or `Cache-Control: no-cache` requires fresh upstream reads. Equivalent CLI/MCP tools are `queue_summary`, `library_summary` and `monitoring_status`.
 
 | Projection              | Grant                    | Data                                                                 |
 | ----------------------- | ------------------------ | -------------------------------------------------------------------- |

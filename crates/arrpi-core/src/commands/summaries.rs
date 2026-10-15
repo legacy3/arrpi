@@ -4,9 +4,8 @@ use crate::{
     arguments::Fresh,
     error::ApiError,
     source::{Principal, ReadMode},
-    summaries::SummaryKind,
+    summaries::{Summary, SummaryKind, SummaryRow},
 };
-use serde_json::{Value, json};
 
 impl Commands {
     /// Read only the summary capabilities this principal is explicitly allowed to see.
@@ -18,7 +17,7 @@ impl Commands {
         principal: &Principal,
         kind: SummaryKind,
         args: Fresh,
-    ) -> Result<Value, ApiError> {
+    ) -> Result<Summary, ApiError> {
         let mut sources = Vec::with_capacity(self.sources.len());
 
         for (name, source) in &self.sources {
@@ -41,13 +40,18 @@ impl Commands {
                 )
                 .await
             {
-                Ok(read) => {
-                    json!({"source":name,"kind":source.descriptor().kind,"status":"ok","data":read.data,"freshness":read.freshness.public(args.no_cache)})
-                }
+                Ok(read) => SummaryRow::Ok {
+                    source: name.to_owned(),
+                    kind: source.descriptor().kind.to_owned(),
+                    data: Box::new(read.data),
+                    freshness: read.freshness.document(args.no_cache),
+                },
 
-                Err(error) => {
-                    json!({"source":name,"kind":source.descriptor().kind,"status":"unavailable","code":error.code()})
-                }
+                Err(error) => SummaryRow::Unavailable {
+                    source: name.to_owned(),
+                    kind: source.descriptor().kind.to_owned(),
+                    code: error.code().to_owned(),
+                },
             };
 
             sources.push(value);
@@ -57,8 +61,9 @@ impl Commands {
             return Err(ApiError::FORBIDDEN);
         }
 
-        Ok(
-            json!({"complete":sources.iter().all(|source| source["status"] == "ok" && source["data"]["complete"] == true && source["freshness"]["cache"] != "stale"),"sources":sources}),
-        )
+        Ok(Summary {
+            complete: sources.iter().all(SummaryRow::is_complete),
+            sources,
+        })
     }
 }

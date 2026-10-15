@@ -40,6 +40,15 @@ export interface components {
       /** Format: uint64 */
       tmdb_id?: number | null;
     };
+    /** @description Missing language requirements are not distinct media-item counts. */
+    BazarrSummary: {
+      complete: boolean;
+      /** Format: uint64 */
+      health_issues: number;
+      missing_subtitle_requirements: components["schemas"]["SubtitleRequirements"];
+      /** Format: uint64 */
+      throttled_providers: number;
+    };
     /** @description Verified Seerr and Plex identities for one `ArrPi` client. */
     Binding: {
       /** Format: uint64 */
@@ -147,6 +156,44 @@ export interface components {
       /** Format: uint64 */
       tvdb_id?: number | null;
     };
+    /** @description Seven-day counts exclude dry runs; successful replacement counts are unavailable. */
+    CleanuparrSummary: {
+      complete: boolean;
+      generated_at: string;
+      includes_dry_run: boolean;
+      /** Format: uint64 */
+      removed_downloads: number;
+      /** Format: uint64 */
+      replacement_count: number | null;
+      searches: components["schemas"]["SearchCounts"];
+      /** Format: uint64 */
+      window_hours: number;
+    };
+    /**
+     * @description Byte totals only include successful delete actions with a recorded size.
+     * @enum {string}
+     */
+    CleanupBytesScope: "successful_delete_actions_with_known_sizes";
+    /** @description Native camelCase names are retained for the existing normalized contract. */
+    CleanupCounts: {
+      /** Format: uint64 */
+      bytesHandled: number;
+      /** Format: uint64 */
+      episodesHandled: number;
+      /** Format: uint64 */
+      itemsHandled: number;
+      /** Format: uint64 */
+      moviesHandled: number;
+      /** Format: uint64 */
+      seasonsHandled: number;
+      /** Format: uint64 */
+      showsHandled: number;
+    };
+    /**
+     * @description Counts accumulate across successful handled actions.
+     * @enum {string}
+     */
+    CleanupScope: "cumulative";
     /** @description `ArrPi` client grants and an optional native requester identity binding. */
     Client: {
       key: components["schemas"]["Credential"];
@@ -154,6 +201,34 @@ export interface components {
       permissions: string[];
       /** @default null */
       seerr_user: components["schemas"]["Binding"] | null;
+    };
+    /** @description Unknown sizes and overlapping fallback estimates remain explicit. */
+    CollectionCounts: {
+      /** Format: uint64 */
+      activeSizeBytes: number;
+      reclaimable_size_complete: boolean;
+      /** Format: uint64 */
+      reclaimableCount: number;
+      /** Format: uint64 */
+      reclaimableSizedCount: number;
+      /** Format: uint64 */
+      unknown_size_collections: number;
+    };
+    /** @description HTTP command discovery shares names, schemas and effects with protocol adapters. */
+    CommandCatalog: {
+      tools: components["schemas"]["CommandDescriptor"][];
+    };
+    /** @description A command description retains the shared immutable schema allocation. */
+    CommandDescriptor: {
+      annotations: {
+        destructiveHint?: boolean;
+        idempotentHint?: boolean;
+        openWorldHint?: boolean;
+        readOnlyHint?: boolean;
+      };
+      description: string;
+      inputSchema: components["schemas"]["InputSchema"];
+      name: string;
     };
     /** @description Receipt for an applied revision; listener changes require a process restart. */
     ConfigUpdateResult: {
@@ -208,6 +283,26 @@ export interface components {
       /** @default ArrPi release calendar */
       title: string;
     };
+    /** @description Shared schema storage, independent of a protocol adapter's allocation type. */
+    InputSchema: {
+      [key: string]: unknown;
+    };
+    /** @description Null size means at least one item has no measurement; known bytes remain useful. */
+    LibrarySummary: {
+      complete: boolean;
+      /** Format: uint64 */
+      items: number;
+      /** Format: uint64 */
+      items_with_files: number;
+      /** Format: uint64 */
+      items_without_size: number;
+      /** Format: uint64 */
+      known_size_bytes: number;
+      /** Format: uint64 */
+      monitored_items: number;
+      /** Format: uint64 */
+      size_bytes: number | null;
+    };
     /** @description Configured pagination, batch, write admission and audit retention limits. */
     Limits: {
       /**
@@ -240,6 +335,16 @@ export interface components {
        * @default 15
        */
       queue_timeout_seconds: number;
+    };
+    /** @description Collection estimates never represent physical filesystem capacity. */
+    MaintainerrSummary: {
+      cleanup: components["schemas"]["CleanupCounts"];
+      cleanup_bytes_scope: components["schemas"]["CleanupBytesScope"];
+      cleanup_scope: components["schemas"]["CleanupScope"];
+      collections: components["schemas"]["CollectionCounts"];
+      complete: boolean;
+      generated_at: string;
+      reclaimable_uses_fallback: boolean;
     };
     /** @description Global command availability and execution bounds. */
     McpPolicy: {
@@ -286,6 +391,77 @@ export interface components {
       issuer: string;
       /** @default arrpi:mcp */
       required_scope: string;
+    };
+    /**
+     * @description Uncached reads and native cache observations have distinct meanings.
+     * @enum {string}
+     */
+    Observation: "hit" | "miss" | "stale" | "not_cached";
+    /** @description Public observation metadata; age is omitted when an upstream does not provide it. */
+    PublicFreshness: {
+      /** Format: uint64 */
+      age_seconds?: number | null;
+      bypass_requested: boolean;
+      cache: components["schemas"]["Observation"];
+      checked_at: string | null;
+      note?: string | null;
+      source: string;
+    };
+    /**
+     * @description Queue pagination is bounded but cannot provide an atomic upstream snapshot.
+     * @enum {string}
+     */
+    QueueConsistency: "non_atomic_pages";
+    /** @description Byte counters deduplicate download identities while queue rows remain separate. */
+    QueueSummary: {
+      byte_counts_approximate: boolean;
+      byte_counts_complete: boolean;
+      complete: boolean;
+      consistency: components["schemas"]["QueueConsistency"];
+      /** Format: uint */
+      downloads_observed: number;
+      /** Format: uint */
+      items_observed: number;
+      /** Format: uint */
+      page_limit: number;
+      pages: components["schemas"]["PublicFreshness"][];
+      reason: string | null;
+      /** Format: double */
+      remaining_bytes_observed: number;
+      /** Format: uint */
+      rows_without_download_identity: number;
+      /** Format: double */
+      size_bytes_observed: number;
+      statuses: {
+        [key: string]: number;
+      };
+      /** Format: uint */
+      total_reported: number | null;
+    };
+    /** @description Active SAB counters exclude paused/checking jobs according to its native API. */
+    SabnzbdSummary: {
+      /** Format: uint64 */
+      active_jobs: number;
+      /** Format: double */
+      active_remaining_mebibytes: number;
+      complete: boolean;
+      paused: boolean;
+      /** Format: uint64 */
+      queued_jobs: number;
+      /** Format: double */
+      speed_kib_per_second: number;
+      version: string;
+    };
+    /** @description Search/grab counts do not imply a successful replacement download. */
+    SearchCounts: {
+      /** Format: uint64 */
+      completed: number;
+      /** Format: uint64 */
+      failed: number;
+      /** Format: uint64 */
+      grabbed: number;
+      /** Format: uint64 */
+      total: number;
     };
     /** @description Catalog and requester source settings; credentials never serialize. */
     SeerrConnection: {
@@ -386,6 +562,7 @@ export interface components {
       endpoints: components["schemas"]["Endpoint"][];
       kind: string;
       name: string;
+      summaries: components["schemas"]["SummaryKind"][];
     };
     /**
      * @description Supported native library manager protocols.
@@ -430,6 +607,48 @@ export interface components {
        */
       past_days: number;
     };
+    /** @description An item can require more than one subtitle language. */
+    SubtitleRequirements: {
+      /** Format: uint64 */
+      episodes: number;
+      /** Format: uint64 */
+      movies: number;
+    };
+    /** @description Independent source outcomes and explicit aggregate completeness. */
+    Summary: {
+      complete: boolean;
+      sources: components["schemas"]["SummaryRow"][];
+    };
+    /** @description Normalized payloads have distinct required fields without changing their wire shape. */
+    SummaryData:
+      | components["schemas"]["LibrarySummary"]
+      | components["schemas"]["QueueSummary"]
+      | components["schemas"]["SabnzbdSummary"]
+      | components["schemas"]["CleanuparrSummary"]
+      | components["schemas"]["BazarrSummary"]
+      | components["schemas"]["MaintainerrSummary"];
+    /**
+     * @description Each summary requires its own source grant.
+     * @enum {string}
+     */
+    SummaryKind: "queue" | "library" | "status";
+    /** @description A failed source never discards another source's healthy counters. */
+    SummaryRow:
+      | {
+          data: components["schemas"]["SummaryData"];
+          freshness: components["schemas"]["PublicFreshness"];
+          kind: string;
+          source: string;
+          /** @constant */
+          status: "ok";
+        }
+      | {
+          code: string;
+          kind: string;
+          source: string;
+          /** @constant */
+          status: "unavailable";
+        };
     /** @description One aggregate counter row, without arguments or credentials. */
     ToolStat: {
       /** Format: uint64 */

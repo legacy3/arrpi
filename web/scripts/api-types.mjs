@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import openapiTS, { astToString } from "openapi-typescript";
+import swagger2openapi from "swagger2openapi";
+import ts from "typescript";
 import { parse as parseYaml } from "yaml";
 
 import { localReferences } from "./schema.mjs";
@@ -16,21 +18,44 @@ if ([...args].some((arg) => !["--check", "--fetch"].includes(arg))) {
   throw new Error("Supported options: --check, --fetch");
 }
 
-for (const bundle of manifest.bundles) {
-  if (
-    !/^[a-z]+-[\d.]+-apiv\d+$/.test(bundle.name) ||
-    !/^[0-9a-f]{40}$/.test(bundle.commit)
-  ) {
-    throw new Error("Invalid bundle identity");
-  }
-
-  const input = new URL(
-    `schemas/${bundle.name}.${bundle.source_format === "yaml" ? "yaml" : "json"}`,
-    directory,
+function interfaces(source, names) {
+  const file = ts.createSourceFile(
+    "native.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const selected = file.statements.filter(
+    (node) => ts.isInterfaceDeclaration(node) && names.includes(node.name.text),
   );
 
-  if (args.has("--fetch")) {
-    const source = `https://raw.githubusercontent.com/${bundle.repository}/${bundle.commit}/${bundle.source_path}`;
+  if (selected.length !== names.length) {
+    throw new Error("Pinned native interface missing or duplicated");
+  }
+
+  const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+
+  return (
+    selected
+      .map((node) => {
+        const exported = ts.factory.updateInterfaceDeclaration(
+          node,
+          [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+          node.name,
+          node.typeParameters,
+          node.heritageClauses,
+          node.members,
+        );
+
+        return printer.printNode(ts.EmitHint.Unspecified, exported, file);
+      })
+      .join("\n\n") + "\n"
+  );
+}
+
+async function pinnedSource(bundle, input, sourcePath, hash, capture = false) {
+  if (args.has("--fetch") && !capture) {
+    const source = `https://raw.githubusercontent.com/${bundle.repository}/${bundle.commit}/${sourcePath}`;
     const response = await fetch(source, {
       redirect: "error",
       signal: AbortSignal.timeout(30_000),
@@ -47,7 +72,7 @@ for (const bundle of manifest.bundles) {
       size += chunk.length;
 
       if (size > 2 * 1024 * 1024) {
-        throw new Error(`Schema too large: ${bundle.name}`);
+        throw new Error(`Source too large: ${bundle.name}`);
       }
 
       chunks.push(chunk);
@@ -55,11 +80,8 @@ for (const bundle of manifest.bundles) {
 
     const raw = Buffer.concat(chunks, size);
 
-    if (
-      raw.length > 2 * 1024 * 1024 ||
-      createHash("sha256").update(raw).digest("hex") !== bundle.sha256
-    ) {
-      throw new Error(`Pinned schema mismatch: ${bundle.name}`);
+    if (createHash("sha256").update(raw).digest("hex") !== hash) {
+      throw new Error(`Pinned source mismatch: ${bundle.name}`);
     }
 
     await writeFile(input, raw);
@@ -67,20 +89,84 @@ for (const bundle of manifest.bundles) {
 
   const raw = await readFile(input);
 
-  if (createHash("sha256").update(raw).digest("hex") !== bundle.sha256) {
-    throw new Error(`Schema hash mismatch: ${bundle.name}`);
+  if (createHash("sha256").update(raw).digest("hex") !== hash) {
+    throw new Error(`Source hash mismatch: ${bundle.name}`);
   }
 
-  const schema =
-    bundle.source_format === "yaml"
-      ? parseYaml(raw.toString("utf8"))
-      : JSON.parse(raw.toString("utf8"));
+  return raw.toString("utf8");
+}
 
-  localReferences(schema);
-  const ast = await openapiTS(schema, { alphabetize: true, immutable: true });
+for (const bundle of manifest.bundles) {
+  if (
+    !/^[a-z]+-[\d.]+-api(?:v\d+)?$/.test(bundle.name) ||
+    !/^[0-9a-f]{40}$/.test(bundle.commit)
+  ) {
+    throw new Error("Invalid bundle identity");
+  }
+
+  const typescript = bundle.source_format === "typescript";
+  let extension = "json";
+
+  if (typescript) {
+    extension = "ts";
+  } else if (bundle.source_format === "yaml") {
+    extension = "yaml";
+  }
+
+  const input = new URL(
+    `${typescript ? "sources" : "schemas"}/${bundle.name}.${extension}`,
+    directory,
+  );
+  const raw = await pinnedSource(
+    bundle,
+    input,
+    bundle.source_path,
+    bundle.sha256,
+    Boolean(bundle.capture),
+  );
+  let declarations;
+  let detail = "native interfaces";
+
+  if (typescript) {
+    declarations = interfaces(raw, bundle.exports);
+  } else {
+    let schema =
+      bundle.source_format === "yaml" ? parseYaml(raw) : JSON.parse(raw);
+
+    localReferences(schema);
+
+    if (bundle.source_format === "swagger2") {
+      schema = (await swagger2openapi.convertObj(schema, { resolve: false }))
+        .openapi;
+      localReferences(schema);
+    }
+
+    declarations = astToString(
+      await openapiTS(schema, { alphabetize: true, immutable: true }),
+    );
+    detail = `${Object.keys(schema.paths).length} paths`;
+  }
+
+  for (const source of bundle.declarations ?? []) {
+    if (!/^sources\/[a-z\d.-]+\.ts$/.test(source.path)) {
+      throw new Error("Invalid native source path");
+    }
+
+    const raw = await pinnedSource(
+      bundle,
+      new URL(source.path, directory),
+      source.source_path,
+      source.sha256,
+    );
+
+    declarations +=
+      "\n// Native models omitted from the upstream OpenAPI response schemas.\n" +
+      interfaces(raw, source.exports);
+  }
+
   const generated =
-    `// ${bundle.name}; native schema ${bundle.commit}; ${bundle.license} (see ${bundle.license_file}).\n// Generated by ${manifest.generator}; do not edit.\n` +
-    astToString(ast);
+    `// ${bundle.name}; upstream ${bundle.commit}; ${bundle.license} (see ${bundle.license_file}).\n// Generated by ${manifest.generator} and the pinned TypeScript printer; do not edit.\n` +
+    declarations;
   const output = new URL(`${bundle.name}.d.ts`, directory);
 
   if (args.has("--check")) {
@@ -92,7 +178,7 @@ for (const bundle of manifest.bundles) {
   }
 
   console.log(
-    `${args.has("--check") ? "Verified" : "Generated"} ${bundle.name}: ${Object.keys(schema.paths).length} paths`,
+    `${args.has("--check") ? "Verified" : "Generated"} ${bundle.name}: ${detail}${bundle.capture ? " (pinned runtime export)" : ""}`,
   );
 }
 

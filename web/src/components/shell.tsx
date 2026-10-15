@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Box,
   CalendarDays,
   Code,
   Gauge,
@@ -10,6 +9,7 @@ import {
   RefreshCw,
   Settings2,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode } from "react";
 
@@ -178,9 +178,13 @@ function Brand() {
       asChild
     >
       <Link href="/" prefetch={false}>
-        <span className="flex size-8 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
-          <Box className="size-4" />
-        </span>
+        <Image
+          src="/arrpi-mark.png"
+          width={40}
+          height={40}
+          alt=""
+          className="size-10 shrink-0 object-contain"
+        />
         <span className="text-lg font-semibold tracking-tight">
           Arr<span className="text-primary">Pi</span>
         </span>

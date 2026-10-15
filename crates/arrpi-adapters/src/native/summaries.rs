@@ -3,14 +3,15 @@ use super::Native;
 use arrpi_core::{
     error::ApiError,
     source::{LibrarySource, ReadMode, SourceRead},
-    summaries::{SummaryKind, SummarySource},
+    summaries::{
+        LibrarySummary, QueueConsistency, QueueSummary, SummaryData, SummaryKind, SummarySource,
+    },
 };
 use async_trait::async_trait;
 use serde::{
     Deserialize,
     de::{SeqAccess, Visitor},
 };
-use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
@@ -139,7 +140,7 @@ impl Native {
         totals.add(serde_json::from_slice(body)?, page)
     }
 
-    async fn queue_summary(&self, mode: ReadMode) -> Result<SourceRead<Value>, ApiError> {
+    async fn queue_summary(&self, mode: ReadMode) -> Result<SourceRead<QueueSummary>, ApiError> {
         let deadline = self.cache.now() + Duration::from_secs(15);
         let mut totals = QueueTotals::default();
         let mut provenance = Vec::with_capacity(20);
@@ -173,7 +174,7 @@ impl Native {
                 };
             let observed = self.freshness(&read);
 
-            provenance.push(observed.public(mode == ReadMode::Fresh));
+            provenance.push(observed.document(mode == ReadMode::Fresh));
 
             if freshness
                 .as_ref()
@@ -208,9 +209,9 @@ impl Native {
 
 fn finish(
     mut totals: QueueTotals,
-    provenance: Vec<Value>,
+    provenance: Vec<arrpi_core::source::PublicFreshness>,
     freshness: Option<arrpi_core::source::Freshness>,
-) -> Result<SourceRead<Value>, ApiError> {
+) -> Result<SourceRead<QueueSummary>, ApiError> {
     if totals
         .reported
         .is_some_and(|total| totals.seen.len() < total)
@@ -240,23 +241,22 @@ fn finish(
         return Err(ApiError::INVALID_RESPONSE);
     }
 
-    let mut data = json!({
-        "complete": complete,
-        "consistency": "non_atomic_pages",
-        "reason": totals.reason,
-        "items_observed": totals.seen.len(),
-        "total_reported": totals.reported,
-        "downloads_observed": totals.downloads.len(),
-        "rows_without_download_identity": totals.unknown_download_rows,
-        "byte_counts_complete": complete && totals.unknown_download_rows == 0,
-        "byte_counts_approximate": true,
-        "size_bytes_observed": bytes,
-        "remaining_bytes_observed": remaining,
-        "statuses": totals.statuses,
-        "page_limit": 20,
-    });
-
-    data["pages"] = Value::Array(provenance);
+    let data = QueueSummary {
+        complete,
+        consistency: QueueConsistency::NonAtomicPages,
+        reason: totals.reason.map(str::to_owned),
+        items_observed: totals.seen.len(),
+        total_reported: totals.reported,
+        downloads_observed: totals.downloads.len(),
+        rows_without_download_identity: totals.unknown_download_rows,
+        byte_counts_complete: complete && totals.unknown_download_rows == 0,
+        byte_counts_approximate: true,
+        size_bytes_observed: bytes,
+        remaining_bytes_observed: remaining,
+        statuses: totals.statuses,
+        page_limit: 20,
+        pages: provenance,
+    };
 
     Ok(SourceRead {
         data,
@@ -347,9 +347,16 @@ impl SummarySource for Native {
         &self,
         kind: SummaryKind,
         mode: ReadMode,
-    ) -> Result<SourceRead<Value>, ApiError> {
+    ) -> Result<SourceRead<SummaryData>, ApiError> {
         match kind {
-            SummaryKind::Queue => self.queue_summary(mode).await,
+            SummaryKind::Queue => {
+                let read = self.queue_summary(mode).await?;
+
+                Ok(SourceRead {
+                    data: SummaryData::Queue(read.data),
+                    freshness: read.freshness,
+                })
+            }
 
             SummaryKind::Library => {
                 let read = self.snapshot(mode).await?;
@@ -357,7 +364,15 @@ impl SummarySource for Native {
                 let total: LibraryTotals = serde_json::from_slice(read.data.as_ref())?;
 
                 Ok(SourceRead {
-                    data: json!({"complete":true,"items":total.count,"items_with_files":total.available,"monitored_items":total.monitored,"size_bytes":(total.unknown_bytes == 0).then_some(total.bytes),"known_size_bytes":total.bytes,"items_without_size":total.unknown_bytes}),
+                    data: SummaryData::Library(LibrarySummary {
+                        complete: true,
+                        items: total.count,
+                        items_with_files: total.available,
+                        monitored_items: total.monitored,
+                        size_bytes: (total.unknown_bytes == 0).then_some(total.bytes),
+                        known_size_bytes: total.bytes,
+                        items_without_size: total.unknown_bytes,
+                    }),
                     freshness: read.freshness,
                 })
             }

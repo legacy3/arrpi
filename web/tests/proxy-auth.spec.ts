@@ -66,10 +66,15 @@ for (const expiredStatus of [401, 302]) {
     ).toBeVisible();
     await page.getByRole("link", { exact: true, name: "Overview" }).click();
     await expect(page).toHaveURL((url) => url.pathname === "/");
+    await expect(page.getByText("Queued jobs", { exact: true })).toBeVisible();
+    const refresh = page.getByRole("button", {
+      exact: true,
+      name: "Refresh cache status",
+    });
+
+    await expect(refresh).toBeEnabled();
     expired = true;
-    await page
-      .getByRole("button", { exact: true, name: "Refresh cache status" })
-      .click();
+    await refresh.click();
     await expect(
       page.getByRole("button", { exact: true, name: "Retry" }),
     ).toBeVisible();

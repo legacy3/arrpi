@@ -375,7 +375,15 @@ async fn status(
         .commands
         .sources
         .iter()
-        .filter(|(name, _)| access.visible(name))
+        .filter(|(name, source)| {
+            access.visible(name)
+                || (source.accounts().is_some()
+                    && (access.allows("config", "manage")
+                        || (access.binding.is_some()
+                            && ["catalog", "requests", "issues"]
+                                .iter()
+                                .any(|operation| access.allows(operation, "view")))))
+        })
         .map(|(name, source)| SourceInfo {
             name: name.to_owned(),
             kind: source.descriptor().kind.to_owned(),
@@ -387,6 +395,16 @@ async fn status(
                 .copied()
                 .collect(),
             calendar: source.calendar().is_some() && access.allows(name, "calendar-view"),
+            summaries: arrpi_core::summaries::SummaryKind::ALL
+                .iter()
+                .filter(|kind| {
+                    source
+                        .summaries()
+                        .is_some_and(|summary| summary.supports(**kind))
+                        && access.allows(name, kind.grant())
+                })
+                .copied()
+                .collect(),
             counters: source.counters(),
         })
         .collect();
@@ -406,10 +424,12 @@ async fn status(
 async fn summary(
     State(gateway): State<Arc<Gateway>>,
     Path(kind): Path<arrpi_core::summaries::SummaryKind>,
-    axum::extract::Query(args): axum::extract::Query<arrpi_core::arguments::Fresh>,
+    axum::extract::Query(mut args): axum::extract::Query<arrpi_core::arguments::Fresh>,
     headers: HeaderMap,
-) -> Result<Json<Value>, HttpError> {
+) -> Result<Json<arrpi_core::summaries::Summary>, HttpError> {
     let principal = auth::authenticate(&headers, &gateway.clients)?;
+
+    args.no_cache |= query::read_mode(&headers) == arrpi_core::source::ReadMode::Fresh;
 
     Ok(Json(
         gateway.commands.summaries(principal, kind, args).await?,

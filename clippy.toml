@@ -1,0 +1,6 @@
+# Transitive dependencies require incompatible releases of these crates.
+# getrandom: TLS crypto versus C build tooling; syn: macros during the 2/3 migration;
+# windows-sys: platform dependencies; base64: JWT 9/reqwest 0.12 require 0.22,
+# while hyper-util 0.1.21 requires 0.23. Keep hyper-util's network fixes and
+# duplicate checks for every other crate.
+allowed-duplicate-crates = ["base64", "getrandom", "syn", "windows-sys"]

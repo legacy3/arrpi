@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+test-results/
+playwright-report/
+../third_party/native-types/*.ts

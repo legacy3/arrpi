@@ -1,0 +1,30 @@
+# Both values describe the same internal authority; override it once if needed.
+services:
+  arrpi:
+    environment:
+      ARRPI_MCP_PROXY_HOST: ${ARRPI_CORE_AUTHORITY:-arrpi:8780}
+  arrpi-ui:
+    image: ${ARRPI_UI_IMAGE:-ghcr.io/legacy3/arrpi-ui:latest}
+    restart: unless-stopped
+    environment:
+      ARRPI_CORE_ORIGIN: http://${ARRPI_CORE_AUTHORITY:-arrpi:8780}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      arrpi:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /app/web/.next/cache:size=32m,uid=1000,gid=1000,mode=0700
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 384m
+    cpus: 2
+    pids_limit: 128
+    stop_grace_period: 660s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

@@ -1,0 +1,21 @@
+version = 1
+
+[workspace]
+name = "ArrPi"
+
+[render]
+templates = ".markupwright/templates"
+header = "header.md.j2"
+navigation = "README.md"
+source-suffix = ".in"
+
+[domains.cargo]
+manifests = ["Cargo.toml"]
+workspace = "Cargo.toml"
+dependency-graph = false
+source-documentation = true
+
+[[documents]]
+include = ["README.md.in"]
+domain = "cargo"
+template = "readme-root.md.j2"

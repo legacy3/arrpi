@@ -1,0 +1,48 @@
+[package]
+name = "arrpi"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "A bounded media API gateway and Seerr-backed MCP server"
+readme = "../../README.md"
+keywords = ["sonarr", "radarr", "api", "cache", "mcp"]
+categories = ["web-programming::http-server"]
+license = "MIT"
+repository = "https://github.com/legacy3/arrpi"
+publish = false
+
+[dependencies]
+arrpi-core = { path = "../arrpi-core" }
+arrpi-adapters = { path = "../arrpi-adapters" }
+arrpi-mcp = { path = "../arrpi-mcp" }
+async-trait.workspace = true
+axum.workspace = true
+base64.workspace = true
+bytes.workspace = true
+chrono = { workspace = true, features = ["std", "serde", "now"] }
+clap = { workspace = true, features = ["derive", "env"] }
+getrandom.workspace = true
+http-body.workspace = true
+icalendar = { workspace = true }
+rss = { workspace = true }
+rusqlite = { workspace = true, features = ["bundled"] }
+secrecy.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+subtle.workspace = true
+tower = { workspace = true, features = ["util"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time", "process", "io-util"] }
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+url.workspace = true
+
+[dev-dependencies]
+oauth-resource-server = { workspace = true, features = ["rustls-tls-native-roots", "testing"] }
+sha2.workspace = true
+reqwest = { workspace = true, features = ["rustls-tls-native-roots", "stream", "json"] }
+tempfile = "3.27.0"
+tokio = { version = "1", features = ["test-util"] }
+
+
+[lints]
+workspace = true

@@ -1,0 +1,5 @@
+# Add a preview binding on a specific private interface, alongside test loopback.
+services:
+  arrpi-ui:
+    ports:
+      - "${ARRPI_PREVIEW_BIND:?Set a private interface address}:4173:3000"

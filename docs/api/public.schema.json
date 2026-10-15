@@ -1,0 +1,1173 @@
+{
+  "components": {
+    "schemas": {
+      "AuditEntry": {
+        "description": "A recorded attempt is observability, not an exactly-once mutation journal.",
+        "properties": {
+          "actor_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "target": {
+            "$ref": "#/components/schemas/AuditTarget"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actor_id",
+          "tool",
+          "target",
+          "outcome",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "AuditPage": {
+        "description": "Complete pagination through one account's retained write history.",
+        "properties": {
+          "client": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "type": "array"
+          },
+          "next_offset": {
+            "format": "uint",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "offset": {
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "total": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "client",
+          "items",
+          "total",
+          "offset",
+          "next_offset"
+        ],
+        "type": "object"
+      },
+      "AuditTarget": {
+        "description": "Whitelisted coordinates of a write attempt; free text is never recorded.",
+        "properties": {
+          "episode": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "issue_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "media_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MediaType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "season": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "seasons": {
+            "items": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "tmdb_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "Binding": {
+        "additionalProperties": false,
+        "description": "Verified Seerr and Plex identities for one `ArrPi` client.",
+        "properties": {
+          "id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "plex_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "plex_id"
+        ],
+        "type": "object"
+      },
+      "CachePolicy": {
+        "additionalProperties": false,
+        "description": "Bounds for body retention, normalization, upstream admission and cache freshness.",
+        "properties": {
+          "connection_idle_seconds": {
+            "default": 30,
+            "format": "uint64",
+            "maximum": 300,
+            "minimum": 5,
+            "type": "integer"
+          },
+          "connection_lifetime_seconds": {
+            "default": 300,
+            "format": "uint64",
+            "maximum": 3600,
+            "minimum": 30,
+            "type": "integer"
+          },
+          "fresh_seconds": {
+            "default": 60,
+            "format": "uint64",
+            "maximum": 86400,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_body_bytes": {
+            "default": 1048576,
+            "format": "uint",
+            "maximum": 67108864,
+            "minimum": 1024,
+            "type": "integer"
+          },
+          "max_connections": {
+            "default": 64,
+            "format": "uint",
+            "maximum": 256,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_entries": {
+            "default": 32,
+            "format": "uint",
+            "maximum": 1024,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_normalizations": {
+            "default": 4,
+            "description": "Maximum simultaneous library/calendar normalization operations.",
+            "format": "uint",
+            "maximum": 16,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_requests": {
+            "default": 64,
+            "format": "uint",
+            "maximum": 256,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_retained_bytes": {
+            "default": 134217728,
+            "description": "Aggregate backing-buffer budget across all sources and held responses.",
+            "format": "uint",
+            "maximum": 2147483648,
+            "minimum": 1048576,
+            "type": "integer"
+          },
+          "max_upstream_requests": {
+            "default": 4,
+            "format": "uint",
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "retry_seconds": {
+            "default": 5,
+            "format": "uint64",
+            "maximum": 60,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "stale_seconds": {
+            "default": 900,
+            "format": "uint64",
+            "maximum": 86400,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "default": 10,
+            "format": "uint64",
+            "maximum": 60,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fresh_seconds",
+          "stale_seconds",
+          "retry_seconds",
+          "timeout_seconds",
+          "max_entries",
+          "max_body_bytes",
+          "max_retained_bytes",
+          "max_normalizations",
+          "max_upstream_requests",
+          "max_requests",
+          "max_connections",
+          "connection_idle_seconds",
+          "connection_lifetime_seconds"
+        ],
+        "type": "object"
+      },
+      "CacheState": {
+        "description": "Cache provenance, distinct from current upstream reachability.",
+        "enum": [
+          "hit",
+          "miss",
+          "stale"
+        ],
+        "type": "string"
+      },
+      "Calendar": {
+        "description": "Monitored releases combined across authorized calendar capabilities.",
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarEvent"
+            },
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatus"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "events",
+          "sources"
+        ],
+        "type": "object"
+      },
+      "CalendarEvent": {
+        "description": "A calendar event contains only user-facing metadata and public identifiers.",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "episode": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "has_file": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "imdb_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EventKind"
+          },
+          "season": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "tmdb_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tvdb_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "source",
+          "id",
+          "title",
+          "kind",
+          "date",
+          "has_file"
+        ],
+        "type": "object"
+      },
+      "Client": {
+        "additionalProperties": false,
+        "description": "`ArrPi` client grants and an optional native requester identity binding.",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/Credential"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "seerr_user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Binding"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "name",
+          "key",
+          "permissions",
+          "seerr_user"
+        ],
+        "type": "object"
+      },
+      "ConfigUpdateResult": {
+        "description": "Receipt for an applied revision; listener changes require a process restart.",
+        "properties": {
+          "restart_required": {
+            "type": "boolean"
+          },
+          "revision": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "restart_required"
+        ],
+        "type": "object"
+      },
+      "ConnectionHealth": {
+        "description": "Operator-only connection diagnostics without native identities or error details.",
+        "properties": {
+          "health_issue_count": {
+            "format": "uint",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConnectionState"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "health_issue_count"
+        ],
+        "type": "object"
+      },
+      "ConnectionState": {
+        "description": "Current probe outcome; configuration alone never establishes reachability.",
+        "enum": [
+          "healthy",
+          "attention",
+          "authentication_failed",
+          "unavailable",
+          "unconfigured"
+        ],
+        "type": "string"
+      },
+      "Counters": {
+        "description": "Aggregate source counters without native identities or query labels.",
+        "properties": {
+          "hits": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "misses": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stale": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "upstream_failures": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hits",
+          "misses",
+          "stale",
+          "upstream_failures"
+        ],
+        "type": "object"
+      },
+      "Credential": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "Endpoint": {
+        "description": "Public native endpoints supported by the allowlisted gateway.",
+        "enum": [
+          "calendar",
+          "series",
+          "movie",
+          "queue",
+          "health",
+          "qualityprofile"
+        ],
+        "type": "string"
+      },
+      "EventKind": {
+        "description": "Calendar event type; cinema and home releases are separate events.",
+        "enum": [
+          "episode",
+          "cinema",
+          "digital",
+          "physical"
+        ],
+        "type": "string"
+      },
+      "Feed": {
+        "additionalProperties": false,
+        "description": "Public metadata shared by calendar feed renderers.",
+        "properties": {
+          "link": {
+            "default": "https://github.com/legacy3/arrpi",
+            "type": "string"
+          },
+          "title": {
+            "default": "ArrPi release calendar",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "link"
+        ],
+        "type": "object"
+      },
+      "Limits": {
+        "additionalProperties": false,
+        "description": "Configured pagination, batch, write admission and audit retention limits.",
+        "properties": {
+          "audit_max_entries": {
+            "default": 10000,
+            "format": "uint",
+            "maximum": 100000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "batch_timeout_seconds": {
+            "default": 45,
+            "format": "uint64",
+            "maximum": 300,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_batch_items": {
+            "default": 20,
+            "format": "uint",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_concurrent_writes": {
+            "default": 4,
+            "format": "uint",
+            "maximum": 32,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_page_items": {
+            "default": 100,
+            "format": "uint",
+            "maximum": 500,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "queue_timeout_seconds": {
+            "default": 15,
+            "format": "uint64",
+            "maximum": 300,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "audit_max_entries",
+          "max_batch_items",
+          "batch_timeout_seconds",
+          "max_page_items",
+          "max_concurrent_writes",
+          "queue_timeout_seconds"
+        ],
+        "type": "object"
+      },
+      "McpPolicy": {
+        "additionalProperties": false,
+        "description": "Global command availability and execution bounds.",
+        "properties": {
+          "disabled_tools": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "enabled": {
+            "default": false,
+            "type": "boolean"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits",
+            "default": {
+              "audit_max_entries": 10000,
+              "batch_timeout_seconds": 45,
+              "max_batch_items": 20,
+              "max_concurrent_writes": 4,
+              "max_page_items": 100,
+              "queue_timeout_seconds": 15
+            }
+          },
+          "public_url": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "public_url",
+          "disabled_tools",
+          "limits"
+        ],
+        "type": "object"
+      },
+      "McpStatus": {
+        "description": "MCP prerequisites and current bound-account tool permissions.",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "connection_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolVisibility"
+            },
+            "type": "array"
+          },
+          "writes_supported": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured",
+          "connected",
+          "writes_supported",
+          "connection_error",
+          "tools"
+        ],
+        "type": "object"
+      },
+      "MediaType": {
+        "enum": [
+          "movie",
+          "tv"
+        ],
+        "type": "string"
+      },
+      "OAuthIdentityBinding": {
+        "additionalProperties": false,
+        "description": "An administrator-approved identity, never inferred from email or token roles.",
+        "properties": {
+          "client": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuer",
+          "subject",
+          "client"
+        ],
+        "type": "object"
+      },
+      "OAuthPolicy": {
+        "additionalProperties": false,
+        "description": "Optional HTTP MCP resource-server policy. The external server owns login and tokens.",
+        "properties": {
+          "bindings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OAuthIdentityBinding"
+            },
+            "type": "array"
+          },
+          "enabled": {
+            "default": false,
+            "type": "boolean"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "required_scope": {
+            "default": "arrpi:mcp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "issuer",
+          "required_scope",
+          "bindings"
+        ],
+        "type": "object"
+      },
+      "SeerrConnection": {
+        "additionalProperties": false,
+        "description": "Catalog and requester source settings; credentials never serialize.",
+        "properties": {
+          "api_key": {
+            "$ref": "#/components/schemas/Credential"
+          },
+          "language": {
+            "default": "en",
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "api_key",
+          "language"
+        ],
+        "type": "object"
+      },
+      "SettingsDocument": {
+        "additionalProperties": false,
+        "description": "Protected application settings stored in the single private `SQLite` document.",
+        "properties": {
+          "cache": {
+            "$ref": "#/components/schemas/CachePolicy",
+            "default": {
+              "connection_idle_seconds": 30,
+              "connection_lifetime_seconds": 300,
+              "fresh_seconds": 60,
+              "max_body_bytes": 1048576,
+              "max_connections": 64,
+              "max_entries": 32,
+              "max_normalizations": 4,
+              "max_requests": 64,
+              "max_retained_bytes": 134217728,
+              "max_upstream_requests": 4,
+              "retry_seconds": 5,
+              "stale_seconds": 900,
+              "timeout_seconds": 10
+            }
+          },
+          "clients": {
+            "items": {
+              "$ref": "#/components/schemas/Client"
+            },
+            "type": "array"
+          },
+          "feed": {
+            "$ref": "#/components/schemas/Feed",
+            "default": {
+              "link": "https://github.com/legacy3/arrpi",
+              "title": "ArrPi release calendar"
+            }
+          },
+          "listen": {
+            "type": "string"
+          },
+          "mcp": {
+            "$ref": "#/components/schemas/McpPolicy",
+            "default": {
+              "disabled_tools": [],
+              "enabled": false,
+              "limits": {
+                "audit_max_entries": 10000,
+                "batch_timeout_seconds": 45,
+                "max_batch_items": 20,
+                "max_concurrent_writes": 4,
+                "max_page_items": 100,
+                "queue_timeout_seconds": 15
+              },
+              "public_url": null
+            }
+          },
+          "oauth": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OAuthPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "seerr": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeerrConnection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "sources": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "type": "object"
+          },
+          "subscriptions": {
+            "$ref": "#/components/schemas/SubscriptionPolicy",
+            "default": {
+              "enabled": false,
+              "future_days": 60,
+              "master_key": null,
+              "max_subjects": 4096,
+              "past_days": 7
+            }
+          }
+        },
+        "required": [
+          "listen",
+          "cache",
+          "feed",
+          "subscriptions",
+          "sources",
+          "clients",
+          "mcp",
+          "seerr",
+          "oauth"
+        ],
+        "type": "object"
+      },
+      "SettingsEnvelope": {
+        "description": "Revisioned settings; credential serialization always emits null.",
+        "properties": {
+          "revision": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/SettingsDocument"
+          }
+        },
+        "required": [
+          "revision",
+          "settings"
+        ],
+        "type": "object"
+      },
+      "Source": {
+        "additionalProperties": false,
+        "description": "A read-only native source with an optional Seerr service mapping.",
+        "properties": {
+          "api_key": {
+            "$ref": "#/components/schemas/Credential"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "seerr_server_id": {
+            "default": null,
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "seerr_server_id",
+          "url",
+          "api_key"
+        ],
+        "type": "object"
+      },
+      "SourceAvailability": {
+        "description": "Availability of one source in a combined result.",
+        "enum": [
+          "ok",
+          "unavailable"
+        ],
+        "type": "string"
+      },
+      "SourceInfo": {
+        "description": "A visible source and its capabilities, without its connection credentials.",
+        "properties": {
+          "calendar": {
+            "type": "boolean"
+          },
+          "counters": {
+            "$ref": "#/components/schemas/Counters"
+          },
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/Endpoint"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "endpoints",
+          "calendar",
+          "counters"
+        ],
+        "type": "object"
+      },
+      "SourceKind": {
+        "description": "Supported native library manager protocols.",
+        "enum": [
+          "sonarr",
+          "radarr",
+          "sabnzbd",
+          "cleanuparr",
+          "bazarr",
+          "maintainerr"
+        ],
+        "type": "string"
+      },
+      "SourceStatus": {
+        "description": "Per-source calendar result and observation freshness.",
+        "properties": {
+          "age_seconds": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "cache": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CacheState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SourceAvailability"
+          }
+        },
+        "required": [
+          "source",
+          "status"
+        ],
+        "type": "object"
+      },
+      "Status": {
+        "description": "Source discovery for the authenticated principal.",
+        "properties": {
+          "cache": {
+            "$ref": "#/components/schemas/CachePolicy"
+          },
+          "config_manage": {
+            "type": "boolean"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceInfo"
+            },
+            "type": "array"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "config_manage",
+          "version",
+          "cache",
+          "sources"
+        ],
+        "type": "object"
+      },
+      "SubscriptionPolicy": {
+        "additionalProperties": false,
+        "description": "Personal feed issuance and bounded rolling calendar windows.",
+        "properties": {
+          "enabled": {
+            "default": false,
+            "type": "boolean"
+          },
+          "future_days": {
+            "default": 60,
+            "format": "uint32",
+            "maximum": 92,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "master_key": {
+            "$ref": "#/components/schemas/Credential",
+            "default": null
+          },
+          "max_subjects": {
+            "default": 4096,
+            "format": "uint",
+            "maximum": 4096,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "past_days": {
+            "default": 7,
+            "format": "uint32",
+            "maximum": 92,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "master_key",
+          "max_subjects",
+          "past_days",
+          "future_days"
+        ],
+        "type": "object"
+      },
+      "ToolStat": {
+        "description": "One aggregate counter row, without arguments or credentials.",
+        "properties": {
+          "calls": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "duration_ms": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_duration_ms": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_used": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "outcome",
+          "calls",
+          "duration_ms",
+          "last_duration_ms",
+          "last_used"
+        ],
+        "type": "object"
+      },
+      "ToolStatsPage": {
+        "description": "Account-scoped persistent command counters.",
+        "properties": {
+          "client": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ToolStat"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "client",
+          "items"
+        ],
+        "type": "object"
+      },
+      "ToolVisibility": {
+        "description": "Fresh per-account visibility of one registered command.",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "available"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "ArrPi public API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {}
+}

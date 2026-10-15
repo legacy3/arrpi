@@ -1,0 +1,94 @@
+[workspace]
+resolver = "3"
+members = ["crates/arrpi", "crates/arrpi-core", "crates/arrpi-adapters", "crates/arrpi-mcp"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.95"
+
+[workspace.dependencies]
+axum = "0.8.9"
+base64 = "0.22.1"
+arrayvec = { version = "=0.7.8", default-features = false }
+bitflags = "2"
+bytes = "1"
+chrono = { version = "0.4", default-features = false }
+clap = { version = "4.6" }
+getrandom = "0.4.3"
+hmac = "0.13.0"
+http-body = "1"
+percent-encoding = "2.3.2"
+icalendar = { version = "0.17.14", default-features = false }
+reqwest = { version = "0.12.28", default-features = false }
+oauth-resource-server = { version = "=0.4.1", default-features = false }
+rss = { version = "=2.1.2", default-features = false }
+rusqlite = { version = "=0.40.2", default-features = false }
+rusqlite_migration = { version = "=2.6.0", default-features = false }
+secrecy = "0.10"
+serde = { version = "1" }
+serde_json = "1"
+sha2 = "0.11.1"
+subtle = "2"
+thiserror = "2"
+tower = { version = "0.5" }
+tokio = { version = "1" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3" }
+url = "2"
+rmcp = { version = "=3.5.1", default-features = false }
+schemars = { version = "=1.2.3" }
+async-trait = "0.1.89"
+divan = "=0.1.21"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[profile.ci]
+inherits = "dev"
+debug = 0
+incremental = false
+strip = "debuginfo"
+
+[workspace.lints.rust]
+ambiguous_negative_literals = "warn"
+missing_debug_implementations = "warn"
+redundant_imports = "warn"
+redundant_lifetimes = "warn"
+trivial_numeric_casts = "warn"
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "warn"
+unused_lifetimes = "warn"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+allow_attributes_without_reason = "warn"
+as_pointer_underscore = "warn"
+assertions_on_result_states = "warn"
+clone_on_ref_ptr = "warn"
+deref_by_slicing = "warn"
+disallowed_script_idents = "warn"
+empty_drop = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+fn_to_numeric_cast_any = "warn"
+if_then_some_else_none = "warn"
+implicit_clone = "warn"
+map_err_ignore = "warn"
+module_name_repetitions = "allow"
+redundant_type_annotations = "warn"
+renamed_function_params = "warn"
+semicolon_outside_block = "warn"
+undocumented_unsafe_blocks = "warn"
+unnecessary_safety_comment = "warn"
+unnecessary_safety_doc = "warn"
+unneeded_field_pattern = "warn"
+unused_result_ok = "warn"

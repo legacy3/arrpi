@@ -1,0 +1,124 @@
+x-core: &core
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    target: core
+  image: arrpi-core:test
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m,mode=1777
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 256m
+  cpus: 1
+  pids_limit: 64
+  stop_grace_period: 660s
+
+x-ui: &ui
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    target: ui
+  image: arrpi-ui:test
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m,mode=1777
+    - /app/web/.next/cache:size=32m,uid=1000,gid=1000,mode=0700
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 384m
+  cpus: 2
+  pids_limit: 128
+  stop_grace_period: 660s
+
+services:
+  init:
+    <<: *core
+    command:
+      [
+        config,
+        import,
+        --database,
+        /state/arrpi.sqlite,
+        --file,
+        /fixtures/arrpi.json,
+      ]
+    volumes:
+      - ../tests/arrpi.json:/fixtures/arrpi.json:ro
+      - arrpi-state:/state
+    healthcheck:
+      disable: true
+  arrpi:
+    <<: *core
+    environment:
+      ARRPI_MCP_PROXY_HOST: arrpi:8780
+    volumes:
+      - arrpi-state:/state
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      fixtures:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4174:8780"
+  arrpi-ui:
+    <<: *ui
+    environment:
+      ARRPI_CORE_ORIGIN: http://arrpi:8780
+    ports:
+      - "127.0.0.1:4173:3000"
+    depends_on:
+      arrpi:
+        condition: service_healthy
+  init-secondary:
+    <<: *core
+    command:
+      [
+        config,
+        import,
+        --database,
+        /state/arrpi.sqlite,
+        --file,
+        /fixtures/arrpi.json,
+      ]
+    volumes:
+      - ../tests/arrpi.json:/fixtures/arrpi.json:ro
+      - arrpi-secondary-state:/state
+    healthcheck:
+      disable: true
+  core-secondary:
+    <<: *core
+    environment:
+      ARRPI_MCP_PROXY_HOST: core-secondary:8780
+    volumes:
+      - arrpi-secondary-state:/state
+    depends_on:
+      init-secondary:
+        condition: service_completed_successfully
+      fixtures:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4175:8780"
+  ui-secondary:
+    <<: *ui
+    environment:
+      ARRPI_CORE_ORIGIN: http://core-secondary:8780
+    ports:
+      - "127.0.0.1:4176:3000"
+    depends_on:
+      core-secondary:
+        condition: service_healthy
+  fixtures:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: fixtures
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    pids_limit: 32
+
+volumes:
+  arrpi-state:
+  arrpi-secondary-state:

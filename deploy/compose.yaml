@@ -1,0 +1,25 @@
+services:
+  arrpi:
+    image: ${ARRPI_CORE_IMAGE:-ghcr.io/legacy3/arrpi-core:latest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8780:8780"
+    volumes:
+      - arrpi-state:/state
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 2
+    pids_limit: 128
+    stop_grace_period: 660s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  arrpi-state:

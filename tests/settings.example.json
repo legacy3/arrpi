@@ -1,0 +1,51 @@
+{
+  "listen": "127.0.0.1:8780",
+  "feed": {
+    "title": "ArrPi release calendar",
+    "link": "https://github.com/legacy3/arrpi"
+  },
+  "subscriptions": {
+    "enabled": false,
+    "master_key": "fake-feed-master-key-0000000000000000000",
+    "max_subjects": 4096,
+    "past_days": 7,
+    "future_days": 60
+  },
+  "cache": {
+    "fresh_seconds": 60,
+    "stale_seconds": 900,
+    "retry_seconds": 5,
+    "timeout_seconds": 10,
+    "max_entries": 32,
+    "max_body_bytes": 1048576,
+    "max_upstream_requests": 4,
+    "max_requests": 64,
+    "max_connections": 64,
+    "connection_idle_seconds": 30,
+    "connection_lifetime_seconds": 300
+  },
+  "sources": {
+    "sonarr": {
+      "kind": "sonarr",
+      "url": "http://sonarr:8989/",
+      "api_key": "fake-upstream-api-key"
+    },
+    "radarr": {
+      "kind": "radarr",
+      "url": "http://radarr:7878/",
+      "api_key": "fake-upstream-api-key"
+    }
+  },
+  "clients": [
+    {
+      "name": "reader",
+      "key": "fake-client-key-00000000000000000000",
+      "permissions": ["metrics", "sonarr:calendar-view", "sonarr:calendar", "sonarr:series", "sonarr:queue", "sonarr:health", "radarr:calendar-view", "radarr:calendar", "radarr:movie", "radarr:queue", "radarr:health"]
+    },
+    {
+      "name": "calendar",
+      "key": "fake-client-key-11111111111111111111",
+      "permissions": ["sonarr:calendar-view", "radarr:calendar-view"]
+    }
+  ]
+}

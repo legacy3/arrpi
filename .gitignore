@@ -1,0 +1,14 @@
+/target/
+/.rulewright.lock
+/arrpi-import.json
+/.env
+/.env.*
+/web/node_modules/
+/web/dist/
+/web/.next/
+/web/out/
+/web/next-env.d.ts
+/web/tsconfig.tsbuildinfo
+/web/test-results/
+/web/playwright-report/
+/.arrpi/

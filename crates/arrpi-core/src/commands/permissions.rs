@@ -1,0 +1,141 @@
+//! Fresh caller rights and source capabilities determine command visibility.
+
+use super::{Caller, Commands};
+use crate::{
+    arguments::MediaType,
+    registry::ToolId,
+    source::{Actor, ActorRights, Principal},
+};
+
+impl Commands {
+    pub(super) fn allowed(&self, caller: &Caller<'_>, tool: ToolId) -> bool {
+        !self
+            .policy
+            .disabled_tools
+            .iter()
+            .any(|name| name.as_ref() == tool.name())
+            && (!tool.is_write() || caller.compatible)
+            && self.permitted(caller, tool)
+    }
+
+    pub(super) fn permitted(&self, caller: &Caller<'_>, tool: ToolId) -> bool {
+        self.locally_permitted(caller.principal, tool) && actor_permitted(caller.actor, tool)
+    }
+
+    pub(super) fn locally_permitted(&self, principal: &Principal, tool: ToolId) -> bool {
+        match tool {
+            ToolId::QueueSummary | ToolId::LibrarySummary | ToolId::MonitoringStatus => {
+                super::summary_kind(tool).is_some_and(|kind| {
+                    self.sources.iter().any(|(name, source)| {
+                        source
+                            .summaries()
+                            .is_some_and(|summary| summary.supports(kind))
+                            && principal.allows(name, kind.grant())
+                    })
+                })
+            }
+
+            ToolId::ListMovies | ToolId::ListSeries | ToolId::SearchLibrary => {
+                self.sources.iter().any(|(name, source)| {
+                    source.library().is_some_and(|library| {
+                        principal.allows(name, "library-view")
+                            && match tool {
+                                ToolId::ListMovies => library.media_type() == MediaType::Movie,
+                                ToolId::ListSeries => library.media_type() == MediaType::Tv,
+                                _ => true,
+                            }
+                    })
+                })
+            }
+
+            ToolId::UpcomingReleases => self.sources.iter().any(|(name, source)| {
+                source.calendar().is_some() && principal.allows(name, "calendar-view")
+            }),
+
+            ToolId::ServiceStatus => {
+                self.sources.iter().any(|(name, source)| {
+                    (source.summaries().is_some() && principal.allows(name, "status-view"))
+                        || (source.library().is_some() && principal.allows(name, "library-view"))
+                        || (source.calendar().is_some() && principal.allows(name, "calendar-view"))
+                }) || (self.sources.account_source().is_some()
+                    && principal.binding.is_some()
+                    && (principal.allows("catalog", "view")
+                        || principal.allows("requests", "view")))
+            }
+
+            _ => self.permitted_account(principal, tool),
+        }
+    }
+
+    fn permitted_account(&self, principal: &Principal, tool: ToolId) -> bool {
+        let Some(broker) = self.sources.account_source() else {
+            return false;
+        };
+
+        if principal.binding.is_none() {
+            return false;
+        }
+
+        match tool {
+            ToolId::SearchMedia | ToolId::MediaDetails | ToolId::MediaDetailsBatch => {
+                broker.catalog().is_some() && principal.allows("catalog", "view")
+            }
+
+            ToolId::MyQuota => principal.allows("requests", "view"),
+
+            ToolId::MyRequests | ToolId::RequestStatus => {
+                broker.requests().is_some() && principal.allows("requests", "view")
+            }
+
+            ToolId::RequestMovie
+            | ToolId::RequestSeries
+            | ToolId::RequestMediaBatch
+            | ToolId::RequestProfiles => {
+                broker.requests().is_some() && principal.allows("requests", "create")
+            }
+
+            ToolId::CancelRequest => {
+                broker.requests().is_some() && principal.allows("requests", "cancel")
+            }
+
+            ToolId::ListIssues => broker.issues().is_some() && principal.allows("issues", "view"),
+
+            ToolId::ReportIssue | ToolId::CloseIssue | ToolId::CloseIssuesBatch => {
+                broker.issues().is_some() && principal.allows("issues", "create")
+            }
+
+            _ => false,
+        }
+    }
+}
+
+fn actor_permitted(actor: Option<Actor>, tool: ToolId) -> bool {
+    if tool.is_native() {
+        return true;
+    }
+
+    let Some(actor) = actor else {
+        return false;
+    };
+    let rights = match tool {
+        ToolId::RequestMovie => ActorRights::REQUEST_MOVIES,
+
+        ToolId::RequestSeries => ActorRights::REQUEST_SERIES,
+
+        ToolId::RequestMediaBatch | ToolId::RequestProfiles => {
+            ActorRights::REQUEST_MOVIES | ActorRights::REQUEST_SERIES
+        }
+
+        ToolId::CancelRequest => ActorRights::CANCEL_OWN_PENDING,
+
+        ToolId::ListIssues => ActorRights::VIEW_ISSUES,
+
+        ToolId::ReportIssue | ToolId::CloseIssue | ToolId::CloseIssuesBatch => {
+            ActorRights::REPORT_ISSUES
+        }
+
+        _ => return true,
+    };
+
+    actor.rights.intersects(rights)
+}

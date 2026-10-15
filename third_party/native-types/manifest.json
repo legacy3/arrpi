@@ -1,0 +1,42 @@
+{
+  "generator": "openapi-typescript@7.13.0",
+  "bundles": [
+    {
+      "name": "sonarr-4.0.20.3014-apiv3",
+      "app": "sonarr",
+      "app_release": "4.0.20.3014",
+      "api_version": "v3",
+      "repository": "Sonarr/Sonarr",
+      "commit": "cab419ade8ac7fcab5bf80394ee492abd35d5f5a",
+      "source_path": "src/Sonarr.Api.V3/openapi.json",
+      "sha256": "03108f7f6b20300b84af879392ac44947cd3d3c19c073184e5fbf94e127165f9",
+      "license": "GPL-3.0",
+      "license_file": "LICENSE.Sonarr"
+    },
+    {
+      "name": "radarr-6.4.4.10685-apiv3",
+      "app": "radarr",
+      "app_release": "6.4.4.10685",
+      "api_version": "v3",
+      "repository": "Radarr/Radarr",
+      "commit": "a96bf7c3ecb23cb76993770727285dc17a613fbc",
+      "source_path": "src/Radarr.Api.V3/openapi.json",
+      "sha256": "95ea9062485118d6a8abed8250b9bfbf94e4de0f55e9c5611da6805864f9a26e",
+      "license": "GPL-3.0",
+      "license_file": "LICENSE.Radarr"
+    },
+    {
+      "name": "seerr-3.5.0-apiv1",
+      "app": "seerr",
+      "app_release": "3.5.0",
+      "api_version": "v1",
+      "repository": "seerr-team/seerr",
+      "commit": "e2f24cb46079746936516c723b09820360f95113",
+      "source_path": "seerr-api.yml",
+      "source_format": "yaml",
+      "sha256": "9533fc4ce04a5e68ef3d7c2deef5a25c43b560dbde07c361eb0f736fce66bf56",
+      "license": "MIT",
+      "license_file": "LICENSE.Seerr"
+    }
+  ]
+}

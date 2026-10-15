@@ -1,0 +1,105 @@
+{
+  "listen": "127.0.0.1:8780",
+  "subscriptions": {
+    "enabled": true,
+    "master_key": "fake-feed-master-key-0000000000000000000"
+  },
+  "sources": {
+    "sonarr": {
+      "kind": "sonarr",
+      "url": "http://fixtures:8989/",
+      "api_key": "fake-upstream-api-key",
+      "seerr_server_id": 0
+    },
+    "radarr": {
+      "kind": "radarr",
+      "url": "http://fixtures:7878/",
+      "api_key": "fake-upstream-api-key",
+      "seerr_server_id": 0
+    }
+  },
+  "clients": [
+    {
+      "name": "reader",
+      "key": "fake-browser-key-00000000000000000000",
+      "permissions": [
+        "config:manage",
+        "metrics",
+        "sonarr:calendar-view",
+        "sonarr:calendar",
+        "sonarr:series",
+        "sonarr:queue",
+        "sonarr:health",
+        "radarr:calendar-view",
+        "radarr:calendar",
+        "radarr:movie",
+        "radarr:queue",
+        "radarr:health",
+        "sonarr:library-view",
+        "radarr:library-view"
+      ]
+    },
+    {
+      "name": "calendar",
+      "key": "fake-calendar-key-0000000000000000000",
+      "permissions": ["sonarr:calendar-view", "radarr:calendar-view"]
+    },
+    {
+      "name": "issuer",
+      "key": "fake-feed-issuer-key-0000000000000000000",
+      "permissions": [
+        "feeds:issue",
+        "sonarr:calendar-view",
+        "radarr:calendar-view"
+      ]
+    },
+    {
+      "name": "requester-1",
+      "key": "fake-requester-key-0000000000000000000",
+      "seerr_user": {
+        "id": 1,
+        "plex_id": 101
+      },
+      "permissions": [
+        "catalog:view",
+        "requests:view",
+        "requests:create",
+        "requests:cancel",
+        "sonarr:library-view",
+        "radarr:library-view",
+        "issues:view",
+        "issues:create",
+        "sonarr:calendar-view",
+        "radarr:calendar-view"
+      ]
+    },
+    {
+      "name": "requester-2",
+      "key": "fake-requester-key-1111111111111111111",
+      "seerr_user": {
+        "id": 2,
+        "plex_id": 102
+      },
+      "permissions": [
+        "catalog:view",
+        "requests:view",
+        "requests:create",
+        "requests:cancel",
+        "sonarr:library-view",
+        "radarr:library-view",
+        "issues:view",
+        "issues:create",
+        "sonarr:calendar-view",
+        "radarr:calendar-view"
+      ]
+    }
+  ],
+  "mcp": {
+    "enabled": true
+  },
+  "seerr": {
+    "url": "http://fixtures:5055/",
+    "api_key": "fake-seerr-key",
+    "language": "en"
+  }
+}

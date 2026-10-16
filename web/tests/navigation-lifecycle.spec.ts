@@ -159,6 +159,7 @@ test("overview labels requester and future source kinds without inventing native
       endpoints: [],
       kind: "seerr",
       name: "request-catalog",
+      tracking: false,
     },
     {
       ...sample,
@@ -167,6 +168,7 @@ test("overview labels requester and future source kinds without inventing native
       endpoints: [],
       kind: "future-provider",
       name: "future-library",
+      tracking: false,
     },
   ];
   await page.route("**/v1/status", (route) => route.fulfill({ json: status }));

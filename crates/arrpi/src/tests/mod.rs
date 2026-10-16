@@ -11,6 +11,7 @@ mod rss;
 mod settings;
 mod subscriptions;
 mod summaries;
+mod tracking;
 mod transport;
 
 use std::sync::{

@@ -134,6 +134,7 @@ async fn library_unknown_sizes_are_not_invented_and_grants_do_not_imply_each_oth
         built.normalizations,
     );
     let principal = Principal {
+        tracking: None,
         name: "test".to_owned(),
         binding: None,
         permissions: [Box::from("test:library-summary")].into(),

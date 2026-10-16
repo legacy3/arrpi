@@ -2,6 +2,7 @@
 
 pub mod budget;
 pub mod cache;
+mod crosswatch;
 mod discovery;
 pub use discovery::Probe;
 mod factory;

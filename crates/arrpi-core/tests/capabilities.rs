@@ -340,6 +340,7 @@ fn fixture_with_probe(events: Option<Events>) -> (Commands, Principal, Arc<Probe
         })
         .expect("account broker");
     let principal = Principal {
+        tracking: None,
         name: "friend".into(),
         binding: Some(Binding {
             id: 13,

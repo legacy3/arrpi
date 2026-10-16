@@ -19,6 +19,9 @@ struct Contracts {
     connection_health: ConnectionHealth,
     summary: crate::summaries::Summary,
     commands: crate::registry::CommandCatalog,
+    tracking: crate::tracking::Status,
+    tracking_authorization: crate::tracking::Authorization,
+    tracking_poll: crate::tracking::Poll,
 }
 
 /// Export public DTO schemas as `OpenAPI` components for client generation.

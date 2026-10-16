@@ -15,6 +15,7 @@ mod subscriptions;
 #[cfg(test)]
 mod tests;
 
+mod tracking;
 mod transport;
 
 use arrpi_core::{config, executor::CommandExecutor as _};

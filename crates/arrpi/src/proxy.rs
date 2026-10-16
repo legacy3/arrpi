@@ -161,6 +161,12 @@ pub(crate) fn router_shared(gateway: Arc<Gateway>) -> Result<Router, ApiError> {
         .route("/calendar.ics", get(crate::ical::export))
         .route("/calendar.rss", get(crate::rss::export));
     let protected = protected
+        .route("/tracking", get(crate::tracking::status))
+        .route(
+            "/tracking/{action}",
+            axum::routing::post(crate::tracking::action),
+        );
+    let protected = protected
         .route(
             "/subscription",
             axum::routing::post(crate::subscriptions::issue).delete(crate::subscriptions::revoke),
@@ -389,6 +395,12 @@ async fn status(
             name: name.to_owned(),
             kind: source.descriptor().kind.to_owned(),
             account: source.accounts().is_some(),
+            tracking: source.tracking().is_some()
+                && access
+                    .tracking
+                    .as_ref()
+                    .is_some_and(|binding| binding.source == name)
+                && access.allows(name, "tracking-view"),
             endpoints: source
                 .descriptor()
                 .endpoints

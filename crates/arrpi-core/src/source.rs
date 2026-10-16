@@ -160,6 +160,7 @@ pub struct Principal {
     pub name: String,
     pub permissions: BTreeSet<Box<str>>,
     pub binding: Option<Binding>,
+    pub tracking: Option<crate::tracking::Binding>,
 }
 
 impl Principal {
@@ -264,6 +265,10 @@ pub trait ApiSource: Debug + Send + Sync {
     }
 
     fn issues(&self) -> Option<&dyn IssueSource> {
+        None
+    }
+
+    fn tracking(&self) -> Option<&dyn crate::tracking::TrackingSource> {
         None
     }
 

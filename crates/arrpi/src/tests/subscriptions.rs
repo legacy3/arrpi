@@ -245,6 +245,7 @@ fn application(url: &str) -> Router {
     let mut config = Config::parse(&text).expect("fixture config");
 
     config.clients.push(crate::config::Client {
+        tracking_user: None,
         seerr_user: None,
         name: "issuer".into(),
         key: ISSUER.to_owned().into(),

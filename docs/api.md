@@ -21,6 +21,7 @@ Personal feed URLs need neither browser cookies nor a normal ArrPi client key.
 | `GET /v1/status`                                       | Policy and counters for authorized sources; no native URLs or keys                   |
 | `GET /v1/tools`, `POST /v1/tools/{tool}`               | Account-scoped command discovery and execution; same checks as MCP                   |
 | `POST /v1/mcp`                                         | Stateless Streamable HTTP MCP; account Bearer credential required                    |
+| `GET /v1/tracking`, `POST /v1/tracking/{action}`       | [Account-bound CrossWatch playback tracking](tracking.md); separate source grants    |
 | `GET /metrics`                                         | Private aggregate Prometheus counters                                                |
 
 Allowlisted native endpoints are `calendar`, `queue`, `health`, Sonarr `series` and
@@ -33,7 +34,7 @@ The combined calendar needs `source:calendar-view`; this grants no raw calendar 
 other native endpoint access. The `metrics` permission is separate and grants
 aggregate counters across the server. `/v1/status` lists only sources granted to
 the presented key. Each source includes its permitted native `endpoints`, normalized
-`summaries` (`library`, `queue`, `status`), `calendar` access and `account` capability. The configured
+`summaries` (`library`, `queue`, `status`), `calendar` access, `account` and `tracking` capabilities. The configured
 account broker is also visible to configuration managers and bound accounts with
 catalog, request or issue read access. Discovery does not probe upstreams or grant
 additional operations.

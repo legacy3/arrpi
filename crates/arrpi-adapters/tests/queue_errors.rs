@@ -167,6 +167,7 @@ async fn missing_summary_grants_reject_before_network_and_cache_lookup() {
         fixture.built.normalizations.clone(),
     );
     let mut principal = Principal {
+        tracking: None,
         name: "reader".to_owned(),
         binding: None,
         permissions: ["test:library-view".into()].into(),

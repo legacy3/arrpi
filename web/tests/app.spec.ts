@@ -29,6 +29,7 @@ const status: Status = {
       kind: "sonarr",
       name: "sonarr",
       summaries: [],
+      tracking: false,
     },
     {
       account: false,
@@ -38,6 +39,7 @@ const status: Status = {
       kind: "radarr",
       name: "radarr",
       summaries: [],
+      tracking: false,
     },
   ],
   version: "0.1.2",

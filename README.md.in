@@ -32,7 +32,7 @@ Claude Code searches the library, checks upcoming releases, requests a movie and
 
 ## Install
 
-You need Docker with Compose v2 and at least one supported service: Sonarr v4, Radarr (v3 API), Seerr, SABnzbd, Bazarr, Cleanuparr or Maintainerr.
+You need Docker with Compose v2 and at least one supported service: Sonarr v4, Radarr (v3 API), Seerr, SABnzbd, Bazarr, Cleanuparr, Maintainerr or CrossWatch.
 
 ### API and CLI
 
@@ -122,6 +122,10 @@ The MCP page shows tool access, usage and write history. Set the catalog languag
 Requests retain Seerr’s permissions, quotas, profiles, approval rules and requester tags. ArrPi never requests 4K or deletes library media. Optional connections to SABnzbd, Cleanuparr, Bazarr and Maintainerr expose read-only counters with their own access grants.
 
 HTTP clients use `/v1/mcp`; stdio clients use `arrpi mcp --url https://arrpi.example.com`. [MCP and media requests](docs/mcp.md) documents setup, tools, profiles, pagination and uncertain outcomes.
+
+## Playback tracking
+
+The [CrossWatch adapter](docs/tracking.md) lets portals connect each person’s Plex account to multiple playback destinations and control tracking per service through an account-bound API. CrossWatch handles authorization and playback; no bulk history import is started.
 
 ## Data and backups
 

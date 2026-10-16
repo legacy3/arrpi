@@ -33,6 +33,7 @@ impl Access {
             principal: Principal {
                 name: client.name.clone(),
                 binding: client.seerr_user.clone(),
+                tracking: client.tracking_user.clone(),
                 permissions: client.permissions.iter().cloned().collect::<BTreeSet<_>>(),
             },
         })

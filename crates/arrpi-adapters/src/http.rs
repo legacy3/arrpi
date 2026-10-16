@@ -156,3 +156,13 @@ fn announced(
         .content_length()
         .and_then(|length| usize::try_from(length).ok()))
 }
+
+/// Retain a safe failure category without logging native inputs or credentials.
+pub(crate) fn redacted_error<T>(error: &T, kind: ApiError) -> ApiError {
+    tracing::debug!(
+        event = "native_tracking_failure",
+        category = std::any::type_name_of_val(error)
+    );
+
+    kind
+}

@@ -189,6 +189,7 @@ test("adding one source refreshes discovery without reconnecting", async ({
         kind: "sonarr",
         name: "extra",
         summaries: [],
+        tracking: false,
       });
     }
 
@@ -589,4 +590,42 @@ test("feed titles use the server byte limit and retain spaces while typing", asy
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(page.getByRole("status")).toHaveText("Saved and applied.");
   expect(writes.at(-1)?.settings.feed.title).toBe("Friends release calendar");
+});
+
+test("editing tracking client access preserves its isolated native binding", async ({
+  configDocument,
+  connect,
+  page,
+}) => {
+  const binding = {
+    plex_id: 101,
+    plex_server_owner: false,
+    profile_id: "alice-profile",
+    source: "crosswatch",
+  };
+
+  configDocument.settings.clients.push({
+    key: null,
+    name: "tracking-alice",
+    permissions: ["crosswatch:tracking-view", "crosswatch:tracking-manage"],
+    seerr_user: null,
+    tracking_user: binding,
+  });
+  const { writes } = await mockConfigEditor(page, configDocument);
+
+  await connect("/settings/access");
+  await page
+    .getByRole("button", { exact: true, name: "Edit tracking-alice" })
+    .click();
+  await page
+    .getByLabel("Permissions", { exact: true })
+    .fill("crosswatch:tracking-view");
+  await page.getByRole("button", { exact: true, name: "Save" }).click();
+  await expect(page.getByRole("status")).toHaveText("Saved and applied.");
+  expect(
+    writes
+      .at(-1)
+      ?.settings.clients.find((client) => client.name === "tracking-alice")
+      ?.tracking_user,
+  ).toEqual(binding);
 });

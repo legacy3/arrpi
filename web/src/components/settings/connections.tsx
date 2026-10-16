@@ -213,6 +213,7 @@ function SourceEditor({
                     "cleanuparr",
                     "bazarr",
                     "maintainerr",
+                    "crosswatch",
                   ]}
                 />
               )}

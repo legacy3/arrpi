@@ -109,6 +109,7 @@ function ClientEditor({
     ),
     (value) => {
       const updated = {
+        ...client,
         key: value.key || null,
         name: value.name,
         permissions: value.permissions

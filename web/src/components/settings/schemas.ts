@@ -121,6 +121,7 @@ export function sourceSchema(names: string[], stored: boolean) {
         "cleanuparr",
         "bazarr",
         "maintainerr",
+        "crosswatch",
       ]),
       name: name
         .refine(

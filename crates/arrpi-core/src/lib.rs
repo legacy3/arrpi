@@ -16,6 +16,7 @@ pub mod secret;
 pub mod source;
 pub mod subscriptions;
 pub mod summaries;
+pub mod tracking;
 
 /// An immutable revision of source capabilities, tool policy and observation wiring.
 #[derive(Debug)]

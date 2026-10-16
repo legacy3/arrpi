@@ -3,6 +3,18 @@ export type paths = Record<string, never>;
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** @description Only explicit, native-confirmed delivery events are exposed to the account. */
+    Activity: {
+      destination: string;
+      /** Format: uint32 */
+      episode: number | null;
+      media_type: string;
+      /** Format: uint32 */
+      season: number | null;
+      title: string;
+      /** Format: int64 */
+      watched_at: number;
+    };
     /** @description A recorded attempt is observability, not an exactly-once mutation journal. */
     AuditEntry: {
       /** Format: uint64 */
@@ -55,6 +67,15 @@ export interface components {
       id: number;
       /** Format: uint64 */
       plex_id: number;
+    };
+    /** @description Native profile and verified Plex cloud identity selected by the operator. */
+    Binding2: {
+      /** Format: uint64 */
+      plex_id: number;
+      /** @default false */
+      plex_server_owner: boolean;
+      profile_id: string;
+      source: string;
     };
     /** @description Bounds for body retention, normalization, upstream admission and cache freshness. */
     CachePolicy: {
@@ -201,6 +222,7 @@ export interface components {
       permissions: string[];
       /** @default null */
       seerr_user: components["schemas"]["Binding"] | null;
+      tracking_user?: components["schemas"]["Binding2"] | null;
     };
     /** @description Unknown sizes and overlapping fallback estimates remain explicit. */
     CollectionCounts: {
@@ -238,6 +260,13 @@ export interface components {
       /** Format: uint64 */
       revision: number;
     };
+    /** @description Linked credentials are distinct from a running playback watcher. */
+    Connection: {
+      authorizing: boolean;
+      linked: boolean;
+      needs_reconnect: boolean;
+      username: string | null;
+    };
     /** @description Operator-only connection diagnostics without native identities or error details. */
     ConnectionHealth: {
       /** Format: uint */
@@ -267,6 +296,13 @@ export interface components {
       upstream_failures: number;
     };
     Credential: string | null;
+    /** @description One independently controlled playback destination in the native profile. */
+    DestinationStatus: {
+      connection: components["schemas"]["Connection"];
+      id: string;
+      label: string;
+      watcher: components["schemas"]["Watcher"];
+    };
     /**
      * @description Public native endpoints supported by the allowlisted gateway.
      * @enum {string}
@@ -399,6 +435,8 @@ export interface components {
      * @enum {string}
      */
     Observation: "hit" | "miss" | "stale" | "not_cached";
+    /** @enum {string} */
+    PollState: "pending" | "authorized" | "expired" | "denied";
     /** @description Public observation metadata; age is omitted when an upstream does not provide it. */
     PublicFreshness: {
       /** Format: uint64 */
@@ -566,13 +604,20 @@ export interface components {
       kind: string;
       name: string;
       summaries: components["schemas"]["SummaryKind"][];
+      tracking: boolean;
     };
     /**
      * @description Supported native library manager protocols.
      * @enum {string}
      */
     SourceKind:
-      "sonarr" | "radarr" | "sabnzbd" | "cleanuparr" | "bazarr" | "maintainerr";
+      | "sonarr"
+      | "radarr"
+      | "sabnzbd"
+      | "cleanuparr"
+      | "bazarr"
+      | "maintainerr"
+      | "crosswatch";
     /** @description Per-source calendar result and observation freshness. */
     SourceStatus: {
       /** Format: uint64 */
@@ -674,6 +719,34 @@ export interface components {
       available: boolean;
       description: string;
       name: string;
+    };
+    /** @description Native PIN authorization is polled and refreshed by the upstream application. */
+    TrackingAuthorization: {
+      code: string;
+      /** Format: uint64 */
+      expires_in: number;
+      verification_url: string;
+    };
+    /** @description Native device polling distinguishes approval from waiting and terminal expiry. */
+    TrackingPoll: {
+      state: components["schemas"]["PollState"];
+    };
+    /** @description No native credentials, instance selectors or global activity leave the adapter. */
+    TrackingStatus: {
+      activity_available: boolean;
+      destinations: components["schemas"]["DestinationStatus"][];
+      plex: components["schemas"]["Connection"];
+      plex_authorization_allowed: boolean;
+      recent: components["schemas"]["Activity"][];
+      trakt: components["schemas"]["Connection"];
+      watcher: components["schemas"]["Watcher"];
+      watcher_ready: boolean;
+    };
+    /** @description A configured route may be paused or awaiting a native watcher restart. */
+    Watcher: {
+      enabled: boolean;
+      managed_elsewhere: boolean;
+      running: boolean;
     };
   };
   responses: never;

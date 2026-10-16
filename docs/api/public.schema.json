@@ -1,6 +1,43 @@
 {
   "components": {
     "schemas": {
+      "Activity": {
+        "description": "Only explicit, native-confirmed delivery events are exposed to the account.",
+        "properties": {
+          "destination": {
+            "type": "string"
+          },
+          "episode": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": ["integer", "null"]
+          },
+          "media_type": {
+            "type": "string"
+          },
+          "season": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": ["integer", "null"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "watched_at": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title",
+          "destination",
+          "watched_at",
+          "media_type",
+          "season",
+          "episode"
+        ],
+        "type": "object"
+      },
       "AuditEntry": {
         "description": "A recorded attempt is observability, not an exactly-once mutation journal.",
         "properties": {
@@ -161,6 +198,29 @@
           }
         },
         "required": ["id", "plex_id"],
+        "type": "object"
+      },
+      "Binding2": {
+        "additionalProperties": false,
+        "description": "Native profile and verified Plex cloud identity selected by the operator.",
+        "properties": {
+          "plex_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "plex_server_owner": {
+            "default": false,
+            "type": "boolean"
+          },
+          "profile_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": ["source", "profile_id", "plex_id", "plex_server_owner"],
         "type": "object"
       },
       "CachePolicy": {
@@ -477,6 +537,16 @@
               }
             ],
             "default": null
+          },
+          "tracking_user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Binding2"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": ["name", "key", "permissions", "seerr_user"],
@@ -586,6 +656,25 @@
         "required": ["revision", "restart_required"],
         "type": "object"
       },
+      "Connection": {
+        "description": "Linked credentials are distinct from a running playback watcher.",
+        "properties": {
+          "authorizing": {
+            "type": "boolean"
+          },
+          "linked": {
+            "type": "boolean"
+          },
+          "needs_reconnect": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["authorizing", "linked", "needs_reconnect", "username"],
+        "type": "object"
+      },
       "ConnectionHealth": {
         "description": "Operator-only connection diagnostics without native identities or error details.",
         "properties": {
@@ -644,6 +733,25 @@
       },
       "Credential": {
         "type": ["string", "null"]
+      },
+      "DestinationStatus": {
+        "description": "One independently controlled playback destination in the native profile.",
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/Connection"
+          },
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "watcher": {
+            "$ref": "#/components/schemas/Watcher"
+          }
+        },
+        "required": ["id", "label", "connection", "watcher"],
+        "type": "object"
       },
       "Endpoint": {
         "description": "Public native endpoints supported by the allowlisted gateway.",
@@ -939,6 +1047,10 @@
       "Observation": {
         "description": "Uncached reads and native cache observations have distinct meanings.",
         "enum": ["hit", "miss", "stale", "not_cached"],
+        "type": "string"
+      },
+      "PollState": {
+        "enum": ["pending", "authorized", "expired", "denied"],
         "type": "string"
       },
       "PublicFreshness": {
@@ -1322,12 +1434,16 @@
               "$ref": "#/components/schemas/SummaryKind"
             },
             "type": "array"
+          },
+          "tracking": {
+            "type": "boolean"
           }
         },
         "required": [
           "name",
           "kind",
           "account",
+          "tracking",
           "endpoints",
           "calendar",
           "summaries",
@@ -1343,7 +1459,8 @@
           "sabnzbd",
           "cleanuparr",
           "bazarr",
-          "maintainerr"
+          "maintainerr",
+          "crosswatch"
         ],
         "type": "string"
       },
@@ -1616,12 +1733,102 @@
         },
         "required": ["name", "description", "available"],
         "type": "object"
+      },
+      "TrackingAuthorization": {
+        "description": "Native PIN authorization is polled and refreshed by the upstream application.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "expires_in": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "verification_url": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "verification_url", "expires_in"],
+        "type": "object"
+      },
+      "TrackingPoll": {
+        "description": "Native device polling distinguishes approval from waiting and terminal expiry.",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/PollState"
+          }
+        },
+        "required": ["state"],
+        "type": "object"
+      },
+      "TrackingStatus": {
+        "description": "No native credentials, instance selectors or global activity leave the adapter.",
+        "properties": {
+          "activity_available": {
+            "type": "boolean"
+          },
+          "destinations": {
+            "items": {
+              "$ref": "#/components/schemas/DestinationStatus"
+            },
+            "type": "array"
+          },
+          "plex": {
+            "$ref": "#/components/schemas/Connection"
+          },
+          "plex_authorization_allowed": {
+            "type": "boolean"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            },
+            "type": "array"
+          },
+          "trakt": {
+            "$ref": "#/components/schemas/Connection"
+          },
+          "watcher": {
+            "$ref": "#/components/schemas/Watcher"
+          },
+          "watcher_ready": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plex",
+          "trakt",
+          "watcher",
+          "activity_available",
+          "plex_authorization_allowed",
+          "watcher_ready",
+          "recent",
+          "destinations"
+        ],
+        "type": "object"
+      },
+      "Watcher": {
+        "description": "A configured route may be paused or awaiting a native watcher restart.",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "managed_elsewhere": {
+            "type": "boolean"
+          },
+          "running": {
+            "type": "boolean"
+          }
+        },
+        "required": ["enabled", "running", "managed_elsewhere"],
+        "type": "object"
       }
     }
   },
   "info": {
     "title": "ArrPi public API",
-    "version": "0.1.4"
+    "version": "0.1.5"
   },
   "openapi": "3.1.0",
   "paths": {}

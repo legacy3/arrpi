@@ -139,6 +139,7 @@ pub enum SourceKind {
     Cleanuparr,
     Bazarr,
     Maintainerr,
+    Crosswatch,
 }
 
 /// `ArrPi` client grants and an optional native requester identity binding.
@@ -150,6 +151,8 @@ pub struct Client {
     pub permissions: Vec<Box<str>>,
     #[serde(default)]
     pub seerr_user: Option<crate::policy::Binding>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tracking_user: Option<crate::tracking::Binding>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
@@ -235,7 +238,14 @@ impl Config {
             if !valid_name(name)
                 || matches!(
                     name.as_str(),
-                    "calendar" | "seerr" | "catalog" | "requests" | "issues" | "config" | "feeds"
+                    "calendar"
+                        | "seerr"
+                        | "catalog"
+                        | "requests"
+                        | "issues"
+                        | "config"
+                        | "feeds"
+                        | "tracking"
                 )
             {
                 return Err(ConfigError::invalid("invalid or reserved source name"));
@@ -245,9 +255,12 @@ impl Config {
         }
 
         validate_client_identities(&self.clients)?;
+        validate_tracking_clients(&self.clients)?;
 
         for client in &self.clients {
             client.validate_binding()?;
+
+            self.validate_tracking(client)?;
 
             if client.permissions.is_empty() {
                 return Err(ConfigError::invalid(
@@ -279,21 +292,27 @@ impl Config {
                     return Err(ConfigError::invalid("unknown permission source"));
                 };
 
-                if !matches!(
-                    endpoint,
-                    "calendar-view"
-                        | "library-view"
-                        | "queue-summary"
-                        | "library-summary"
-                        | "status-view"
-                ) && !source
-                    .kind
-                    .endpoints()
-                    .iter()
-                    .any(|native| native.name() == endpoint)
-                {
+                if !source.kind.allows_permission(endpoint) {
                     return Err(ConfigError::invalid("unknown permission endpoint"));
                 }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_tracking(&self, client: &Client) -> Result<(), ConfigError> {
+        if let Some(binding) = &client.tracking_user {
+            binding.validate()?;
+
+            if !self
+                .sources
+                .get(&binding.source)
+                .is_some_and(|source| source.kind == SourceKind::Crosswatch)
+            {
+                return Err(ConfigError::invalid(
+                    "tracking binding needs a CrossWatch source",
+                ));
             }
         }
 
@@ -487,7 +506,11 @@ impl SourceKind {
                 Endpoint::Qualityprofile,
             ],
 
-            Self::Sabnzbd | Self::Cleanuparr | Self::Bazarr | Self::Maintainerr => &[],
+            Self::Sabnzbd
+            | Self::Cleanuparr
+            | Self::Bazarr
+            | Self::Maintainerr
+            | Self::Crosswatch => &[],
         }
     }
 
@@ -501,7 +524,22 @@ impl SourceKind {
             Self::Cleanuparr => "cleanuparr",
             Self::Bazarr => "bazarr",
             Self::Maintainerr => "maintainerr",
+            Self::Crosswatch => "crosswatch",
         }
+    }
+
+    fn allows_permission(self, endpoint: &str) -> bool {
+        if self == Self::Crosswatch && matches!(endpoint, "tracking-view" | "tracking-manage") {
+            return true;
+        }
+
+        matches!(
+            endpoint,
+            "calendar-view" | "library-view" | "queue-summary" | "library-summary" | "status-view"
+        ) || self
+            .endpoints()
+            .iter()
+            .any(|native| native.name() == endpoint)
     }
 }
 
@@ -515,7 +553,7 @@ fn valid_name(name: &str) -> bool {
 
 impl Client {
     fn validate_binding(&self) -> Result<(), ConfigError> {
-        if self.seerr_user.is_some()
+        if (self.seerr_user.is_some() || self.tracking_user.is_some())
             && self
                 .permissions
                 .iter()
@@ -606,4 +644,24 @@ impl std::fmt::Debug for BaseUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("BaseUrl { [REDACTED] }")
     }
+}
+
+fn validate_tracking_clients(clients: &[Client]) -> Result<(), ConfigError> {
+    let mut profiles = std::collections::BTreeSet::new();
+    let mut identities = std::collections::BTreeSet::new();
+
+    for binding in clients
+        .iter()
+        .filter_map(|client| client.tracking_user.as_ref())
+    {
+        if !profiles.insert((&binding.source, &binding.profile_id))
+            || !identities.insert((&binding.source, binding.plex_id))
+        {
+            return Err(ConfigError::invalid(
+                "tracking accounts must have unique native profiles and Plex identities",
+            ));
+        }
+    }
+
+    Ok(())
 }

@@ -41,6 +41,17 @@ pub fn build(config: &Config, clock: fn() -> Instant) -> Result<BuiltSources, Co
     let mut caches = Vec::with_capacity(config.sources.len());
 
     for (name, source) in &config.sources {
+        if source.kind == SourceKind::Crosswatch {
+            sources.insert(crate::crosswatch::Backend::new(
+                name,
+                source,
+                config.cache,
+                http.clone(),
+                budget.clone(),
+            )?)?;
+            continue;
+        }
+
         let policy = if matches!(source.kind, SourceKind::Sonarr | SourceKind::Radarr) {
             config.cache
         } else {

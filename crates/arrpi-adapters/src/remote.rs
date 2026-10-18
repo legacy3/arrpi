@@ -21,6 +21,7 @@ const MAX_RESPONSE: usize = 8 * 1024 * 1024;
 pub struct RemoteApi {
     api: ApiClient,
     discovery: RwLock<Option<Discovery>>,
+    instance: RwLock<arrpi_core::config::Instance>,
 }
 
 struct Discovery {
@@ -71,6 +72,12 @@ struct RemoteTool {
     input_schema: Map<String, Value>,
 }
 
+#[derive(Deserialize)]
+struct PublicIdentity {
+    title: String,
+    link: String,
+}
+
 impl RemoteApi {
     /// Connect over HTTPS, or plaintext HTTP for loopback only.
     ///
@@ -92,7 +99,40 @@ impl RemoteApi {
         Ok(Self {
             api,
             discovery: RwLock::new(None),
+            instance: RwLock::new(arrpi_core::config::Instance::default()),
         })
+    }
+
+    /// Resolve public instance metadata with the caller credential before serving stdio.
+    ///
+    /// # Errors
+    /// Rejects unavailable or malformed authenticated status.
+    pub async fn identify(&self, credential: &str) -> Result<(), ApiError> {
+        let response = self.api.get(Some(credential), "v1/status", "").await?;
+        let value = response
+            .data
+            .get("instance")
+            .map(|value| {
+                let metadata: PublicIdentity = serde_json::from_value(value.clone())?;
+                let instance = arrpi_core::config::Instance {
+                    title: metadata.title,
+                    link: metadata.link,
+                };
+
+                instance.validate().map_err(|error| {
+                    tracing::debug!(event="remote_identity", category=%error);
+                    ApiError::INVALID_RESPONSE
+                })?;
+                Ok::<_, ApiError>(instance)
+            })
+            .transpose()?
+            .unwrap_or_default();
+
+        *self.instance.write().map_err(|error| {
+            tracing::debug!(event="instance_metadata_lock",category=%error);
+            ApiError::INTERNAL
+        })? = value;
+        Ok(())
     }
 }
 
@@ -283,6 +323,13 @@ fn validate_key(key: &str) -> Result<(), ApiError> {
 
 #[async_trait]
 impl CommandExecutor for RemoteApi {
+    fn instance(&self) -> arrpi_core::config::Instance {
+        self.instance
+            .read()
+            .map(|value| value.clone())
+            .unwrap_or_default()
+    }
+
     async fn list(&self, credential: &str) -> Result<Vec<ToolDefinition>, ApiError> {
         *self.discovery.write().map_err(|error| {
             tracing::debug!(event = "remote_discovery_lock", category = %error);

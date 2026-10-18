@@ -72,7 +72,7 @@ Open `http://127.0.0.1:3000/` and enter the admin key. Add your apps’ URLs and
 
 Create client keys under **Settings → Access** and choose which sources and operations each client can use. Use these keys in dashboards and scripts. Keep the admin key for managing ArrPi.
 
-The overview shows permitted library, queue and monitoring summaries. In **Explorer**, choose a source to see its available reads and account commands. **All sources** groups combined library, queue, monitoring and calendar operations. Seerr searches, requests and issues use the connected requester account. The calendar combines the connected Sonarr and Radarr libraries. Personal RSS/iCalendar setup is covered in [feeds](docs/api.md#personal-feed-subscriptions).
+The overview puts current connection health before library, queue and app activity. Diagnostics stay collapsible. In **Explorer**, choose a source to see its available reads and account commands. Common commands offer title lookup and guided fields, with JSON available for advanced use. **All sources** groups combined library, queue, monitoring and calendar operations. Seerr searches, requests and issues use the connected requester account. The calendar combines the connected Sonarr and Radarr libraries. Personal RSS/iCalendar setup is covered in [feeds](docs/api.md#personal-feed-subscriptions).
 
 ## CLI
 
@@ -117,7 +117,7 @@ Requests and issues support stable **Seerr >=3.5.0, <4.0.0** releases and requir
 2. Enable the server under **Settings → MCP**. Tool switches and limits are here too.
 3. Open **MCP** and copy the install command for Claude Code, Codex or Gemini CLI. Each account gets its own token.
 
-The MCP page shows tool access, usage and write history. Set the catalog language in the Seerr connection settings; it defaults to English (`en`).
+The MCP page shows searchable write history, command progress, effective tool access and usage. Name your stack in **Settings → General**; the UI, feeds and MCP share that identity. Set the catalog language in the Seerr connection settings; it defaults to English (`en`).
 
 Requests retain Seerr’s permissions, quotas, profiles, approval rules and requester tags. ArrPi never requests 4K or deletes library media. Optional connections to SABnzbd, Cleanuparr, Bazarr and Maintainerr expose read-only counters with their own access grants.
 

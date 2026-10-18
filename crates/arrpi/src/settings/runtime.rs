@@ -1,4 +1,6 @@
 //! Settings edits replace the same router used by HTTP, CLI and web consumers.
+mod accounts;
+mod audit;
 mod health;
 
 use std::{
@@ -26,9 +28,7 @@ use crate::{
     proxy::{self, Gateway},
 };
 use arrpi_adapters::storage;
-use arrpi_core::contracts::{
-    AuditPage, ConfigUpdateResult, McpStatus, SettingsEnvelope, ToolStatsPage,
-};
+use arrpi_core::contracts::{ConfigUpdateResult, McpStatus, SettingsEnvelope, ToolStatsPage};
 
 type Build = fn(&Config, &std::path::Path, Store) -> Result<Gateway, ApiError>;
 
@@ -79,10 +79,11 @@ impl Runtime {
         let state = Arc::new(self);
         let settings = Router::new()
             .route("/v1/config", get(read).put(write))
+            .route("/v1/config/accounts", get(accounts::read))
             .route("/v1/config/connections/{source}/health", get(health::read))
             .route("/v1/mcp/status", get(mcp_status))
             .route("/v1/config/mcp/stats", get(mcp_stats))
-            .route("/v1/config/mcp/audit", get(mcp_audit))
+            .route("/v1/config/mcp/audit", get(audit::read))
             .route("/v1/mcp/token", get(mcp_token))
             .route_layer(middleware::from_fn_with_state(
                 Arc::clone(&state),
@@ -377,45 +378,6 @@ async fn mcp_stats(
 
     Ok(Json(
         tokio::task::spawn_blocking(move || store.tool_stats(&query.client))
-            .await
-            .map_err(ApiError::from)??,
-    ))
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct AuditQuery {
-    client: String,
-    #[serde(default)]
-    offset: usize,
-    #[serde(default)]
-    limit: Option<usize>,
-}
-
-async fn mcp_audit(
-    State(runtime): State<Arc<Runtime>>,
-    Query(query): Query<AuditQuery>,
-) -> Result<Json<AuditPage>, HttpError> {
-    let (_, config) = runtime.snapshot().await?;
-
-    if !config.clients.iter().any(|c| c.name == query.client) {
-        return Err(ApiError::NOT_FOUND.into());
-    }
-
-    let limit = query
-        .limit
-        .unwrap_or_else(|| 20.min(config.mcp.limits.max_page_items));
-
-    if !(1..=config.mcp.limits.max_page_items).contains(&limit)
-        || i64::try_from(query.offset).is_err()
-    {
-        return Err(ApiError::BAD_QUERY.into());
-    }
-
-    let store = Arc::clone(&runtime.store);
-
-    Ok(Json(
-        tokio::task::spawn_blocking(move || store.write_audit(&query.client, query.offset, limit))
             .await
             .map_err(ApiError::from)??,
     ))

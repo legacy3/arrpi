@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 
 import packageInfo from "../package.json" with { type: "json" };
-import { mockConfigEditor, test } from "./fixtures/ui";
+import { choose, mockConfigEditor, test } from "./fixtures/ui";
 
 test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: "wait" });
@@ -45,13 +45,13 @@ test("connection rows report independent fresh health and retain lowercase sourc
   try {
     await connect("/settings");
     await expect(
-      page.getByLabel("sonarr: Configured · Checking…", { exact: true }),
+      page.getByLabel("sonarr: Configured, Checking…", { exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByLabel("radarr: Configured · Unavailable", { exact: true }),
+      page.getByLabel("radarr: Configured, Unavailable", { exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByLabel("seerr: Configured · Authentication failed", {
+      page.getByLabel("seerr: Configured, Authentication failed", {
         exact: true,
       }),
     ).toBeVisible();
@@ -68,7 +68,7 @@ test("connection rows report independent fresh health and retain lowercase sourc
   }
 
   await expect(
-    page.getByLabel("sonarr: Configured · Healthy", { exact: true }),
+    page.getByLabel("sonarr: Configured, Healthy", { exact: true }),
   ).toBeVisible();
   expect(observed.toSorted((left, right) => left.localeCompare(right))).toEqual(
     [...Object.keys(configDocument.settings.sources), "seerr"].toSorted(
@@ -119,10 +119,10 @@ test("unconfigured Seerr is not probed and HTTP failures are never displayed as 
     page.getByLabel("seerr: Not configured", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByLabel("sonarr: Configured · Needs attention", { exact: true }),
+    page.getByLabel("sonarr: Configured, Needs attention", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByLabel("radarr: Configured · Check failed", { exact: true }),
+    page.getByLabel("radarr: Configured, Check failed", { exact: true }),
   ).toBeVisible();
   expect(observed.toSorted((left, right) => left.localeCompare(right))).toEqual(
     Object.keys(configDocument.settings.sources).toSorted((left, right) =>
@@ -148,28 +148,31 @@ test("API key hints react to the app without losing a credential draft", async (
 
   await expect(key).toHaveAttribute("placeholder", "Required");
   await key.fill("fake-credential-draft");
-  await page.getByLabel("App", { exact: true }).selectOption("maintainerr");
+  await choose(page, "App", "maintainerr");
   await expect(key).toHaveAttribute("placeholder", "Not required");
 
   for (const kind of ["sonarr", "radarr", "sabnzbd", "cleanuparr", "bazarr"]) {
-    await page.getByLabel("App", { exact: true }).selectOption(kind);
+    await choose(page, "App", kind);
     await expect(key).toHaveAttribute("placeholder", "Required");
     await expect(key).toHaveValue("fake-credential-draft");
   }
 
-  await page.getByRole("button", { exact: true, name: "Back" }).click();
+  await page.getByRole("link", { exact: true, name: "Back" }).click();
+  await page
+    .getByRole("button", { exact: true, name: "Discard changes" })
+    .click();
   await page.getByRole("button", { exact: true, name: "Edit sonarr" }).click();
   await expect(page.getByLabel("API key", { exact: true })).toHaveAttribute(
     "placeholder",
     "Unchanged",
   );
   await expect(page.getByLabel("API key", { exact: true })).toHaveValue("");
-  await page.getByLabel("App", { exact: true }).selectOption("radarr");
+  await choose(page, "App", "radarr");
   await expect(page.getByLabel("API key", { exact: true })).toHaveAttribute(
     "placeholder",
     "Unchanged",
   );
-  await page.getByLabel("App", { exact: true }).selectOption("maintainerr");
+  await choose(page, "App", "maintainerr");
   await expect(page.getByLabel("API key", { exact: true })).toHaveAttribute(
     "placeholder",
     "Not required",
@@ -213,7 +216,7 @@ test("real operator health works for native apps and Seerr without an actor bind
 
   for (const source of ["sonarr", "radarr", "seerr"]) {
     await expect(
-      page.getByLabel(`${source}: Configured · Healthy`, { exact: true }),
+      page.getByLabel(`${source}: Configured, Healthy`, { exact: true }),
     ).toBeVisible();
   }
 });

@@ -73,7 +73,7 @@ test("proxy session remains mounted across every tab and browser history", async
       page.getByRole("heading", { exact: true, name }),
     ).toBeVisible();
     await page.waitForLoadState("networkidle");
-    await expect(page).toHaveTitle(`${name} · ArrPi`);
+    await expect(page).toHaveTitle(`${name} | ArrPi`);
     await expect(page.locator("main")).toHaveAttribute(
       "data-navigation-check",
       "same",
@@ -173,12 +173,13 @@ test("overview labels requester and future source kinds without inventing native
   ];
   await page.route("**/v1/status", (route) => route.fulfill({ json: status }));
   await connect();
+  await page.getByText("Diagnostics", { exact: true }).click();
   const requester = page
     .getByRole("row")
     .filter({ hasText: "request-catalog" });
 
   await expect(requester).toContainText("Seerr");
-  await expect(requester).toContainText("API v1");
+  await expect(requester).toContainText("Account broker");
   await expect(requester).not.toContainText("Radarr");
   const future = page.getByRole("row").filter({ hasText: "future-library" });
 
@@ -186,9 +187,9 @@ test("overview labels requester and future source kinds without inventing native
   await expect(future).not.toContainText("API v3");
   await page.getByText("Runtime policy", { exact: true }).click();
   await expect(
-    page.getByText("Retained body budget", { exact: true }),
+    page.getByText("Shared cache budget (bytes)", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Concurrent normalizations", { exact: true }),
+    page.getByText("Concurrent projections", { exact: true }),
   ).toBeVisible();
 });

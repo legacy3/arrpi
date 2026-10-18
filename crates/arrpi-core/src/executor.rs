@@ -13,6 +13,11 @@ use tokio::time::Instant;
 /// HTTP and stdio use the same command contract without depending on an MCP SDK.
 #[async_trait]
 pub trait CommandExecutor: Debug + Send + Sync {
+    /// Public display metadata; no credentials or native connection details.
+    fn instance(&self) -> crate::config::Instance {
+        crate::config::Instance::default()
+    }
+
     async fn list(&self, credential: &str) -> Result<Vec<ToolDefinition>, ApiError>;
 
     async fn execute(

@@ -85,8 +85,19 @@ impl ServerHandler for Handler {
 
         "arrpi".clone_into(&mut info.server_info.name);
         env!("CARGO_PKG_VERSION").clone_into(&mut info.server_info.version);
+        let instance = self.executor.instance();
+
+        info.server_info.title = Some(format!("ArrPi for {}", instance.title));
+        info.server_info.description = Some(format!(
+            "Media library, requests and maintenance for {}.",
+            instance.title
+        ));
+        info.server_info.website_url = Some(instance.link);
         info.capabilities = ServerCapabilities::builder().enable_tools().build();
-        info.instructions = Some("Browse the installed library or search Seerr's catalog by exact TMDB candidates. Requests use your bound account and never request 4K; approval is not download completion. Use no_cache:true for fresh source reads; Seerr's Plex sync may still lag. Paginate using next_offset and check source completeness. request_profiles lists permitted non-4K choices; omit profile to retain Seerr's default. Batches retain the same account permissions. Cancel only owned pending requests and close only owned issues. Reconcile unknown_outcome through media_details, request_status and my_requests before retrying.".to_owned());
+        info.instructions = Some(format!(
+            "This is ArrPi for {}. Browse the installed library or search Seerr's catalog by exact TMDB candidates. Requests use your bound account and never request 4K; approval is not download completion. Use no_cache:true for fresh source reads; Seerr's Plex sync may still lag. Paginate using next_offset and check source completeness. request_profiles lists permitted non-4K choices; omit profile to retain Seerr's default. Batches retain the same account permissions. Cancel only owned pending requests and close only owned issues. Reconcile unknown_outcome through media_details, request_status and my_requests before retrying. For existing media, refresh_media updates metadata and scans files; wait with media_command_status, inspect series_episodes, then use search_releases to find missing releases. Queued is acceptance, not completion. Report successful completion only after checking status.",
+            instance.title
+        ));
         info
     }
 
@@ -183,7 +194,9 @@ pub fn sdk_tool(definition: ToolDefinition) -> Tool {
         .idempotent(read)
         .open_world(true);
 
-    Tool::new(definition.name, definition.description, schema).with_annotations(annotations)
+    Tool::new(definition.name, definition.description, schema)
+        .with_title(definition.title)
+        .with_annotations(annotations)
 }
 
 fn protocol_error(error: ApiError) -> ErrorData {

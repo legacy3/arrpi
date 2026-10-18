@@ -101,14 +101,14 @@ async fn settings_authorization_redaction_validation_and_rotation_apply_to_live_
     assert!(document["settings"]["sources"]["sonarr"]["api_key"].is_null());
     assert!(document["settings"]["clients"][0]["key"].is_null());
     assert!(!document.to_string().contains(CLIENT_KEY));
-    document["settings"]["feed"]["title"] = Value::String("Changed live".into());
+    document["settings"]["instance"]["title"] = Value::String("Changed live".into());
     assert_eq!(
         update(&app, document, CLIENT_KEY).await.status(),
         StatusCode::OK
     );
     let (_, saved) = store.load().expect("stored config").expect("row");
 
-    assert_eq!(saved.feed.title, "Changed live");
+    assert_eq!(saved.instance.title, "Changed live");
     assert_eq!(saved.clients[0].key.value(), CLIENT_KEY);
     assert_eq!(
         update(&app, original, CLIENT_KEY).await.status(),
@@ -204,14 +204,14 @@ async fn settings_validation_returns_static_rules_without_echoing_owner_values()
     let (app, store) = application();
     let mut document = json(request(&app, "GET", "/v1/config", Some(CLIENT_KEY)).await).await;
 
-    document["settings"]["feed"]["title"] = Value::String("private-owner-value\n".into());
+    document["settings"]["instance"]["title"] = Value::String("private-owner-value\n".into());
     let response = update(&app, document, CLIENT_KEY).await;
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     let error = json(response).await;
 
     assert_eq!(error["code"], "invalid_configuration");
-    assert_eq!(error["reason"], "invalid feed metadata");
+    assert_eq!(error["reason"], "invalid instance metadata");
     assert!(!error.to_string().contains("private-owner-value"));
     assert!(!error.to_string().contains(CLIENT_KEY));
     assert_eq!(store.load().expect("store").expect("row").0, 1);
@@ -499,4 +499,50 @@ async fn write_history_requires_admin_and_validates_page_and_account() {
         .status(),
         StatusCode::NOT_FOUND
     );
+}
+
+#[tokio::test]
+async fn history_time_filters_normalize_offset_boundaries() {
+    use arrpi_core::{contracts::AuditTarget, executor::AuditEvent};
+    let (app, store) = application();
+    let client = config().clients[0].name.clone();
+
+    store
+        .record_audit(
+            &client,
+            None,
+            &[AuditEvent {
+                tool: "refresh_media".to_owned(),
+                target: AuditTarget::default(),
+                outcome: "queued".to_owned(),
+            }],
+            10,
+        )
+        .expect("audit");
+    let entry = store
+        .write_audit(&client, 0, 1)
+        .expect("entry")
+        .items
+        .remove(0);
+    let instant = chrono::DateTime::parse_from_rfc3339(&entry.created_at).expect("stored time");
+    let east = chrono::FixedOffset::east_opt(3 * 3600).expect("offset");
+    let since = instant
+        .with_timezone(&east)
+        .to_rfc3339_opts(chrono::SecondsFormat::Millis, false);
+    let query = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("client", &client)
+        .append_pair("since", &since)
+        .finish();
+    let response = json(
+        request(
+            &app,
+            "GET",
+            &format!("/v1/config/mcp/audit?{query}"),
+            Some(CLIENT_KEY),
+        )
+        .await,
+    )
+    .await;
+
+    assert_eq!(response["total"], 1);
 }

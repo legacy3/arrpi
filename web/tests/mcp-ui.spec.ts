@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 
-import { mockConfigEditor, test } from "./fixtures/ui";
+import { choose, mockConfigEditor, test } from "./fixtures/ui";
 
 test("MCP activity lists access and usage, copies connections and links to settings", async ({
   configDocument: document,
@@ -25,14 +25,20 @@ test("MCP activity lists access and usage, copies connections and links to setti
         connected: true,
         tools: [
           {
-            available: true,
+            available:
+              document.settings.mcp.enabled &&
+              !document.settings.mcp.disabled_tools.includes("search_media"),
             description: "Search the catalog",
             name: "search_media",
+            reason: document.settings.mcp.enabled ? null : "server_disabled",
+            title: "Search media",
           },
           {
             available: false,
             description: "Cancel a pending request",
             name: "cancel_request",
+            reason: "missing_grant",
+            title: "Cancel request",
           },
         ],
         writes_supported: true,
@@ -104,7 +110,7 @@ test("MCP activity lists access and usage, copies connections and links to setti
   await expect(
     page.getByRole("heading", { exact: true, name: "MCP" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Account", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Account", { exact: true })).toContainText(
     "mcp-friend",
   );
   await expect(
@@ -112,14 +118,15 @@ test("MCP activity lists access and usage, copies connections and links to setti
   ).toContainText("TMDB 42");
   await expect(
     page.getByRole("table", { name: "Write history" }),
-  ).toContainText("request #7");
+  ).toContainText("Movie (TMDB 42)");
   await expect(page.getByLabel("Enable MCP", { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole("button", { exact: true, name: "Save" }),
   ).toHaveCount(0);
+  await page.getByRole("tab", { name: "Tools and usage" }).click();
   await expect(
-    page.getByRole("row").filter({ hasText: "cancel_request" }),
-  ).toContainText("Not permitted");
+    page.getByRole("row").filter({ hasText: "Cancel request" }),
+  ).toContainText("Needs an access grant");
   expect(
     await page.getByRole("heading", { level: 2 }).first().textContent(),
   ).toBe("Connect a client");
@@ -160,7 +167,7 @@ test("MCP activity lists access and usage, copies connections and links to setti
   releaseToken?.();
   await expect(page.getByLabel("Account", { exact: true })).toBeEnabled();
   delayed = false;
-  await page.getByLabel("Account", { exact: true }).selectOption("reader");
+  await choose(page, "Account", "reader");
 
   for (const label of ["Claude Code", "Codex", "Gemini CLI"]) {
     await expect(
@@ -168,25 +175,21 @@ test("MCP activity lists access and usage, copies connections and links to setti
     ).toBeDisabled();
   }
 
-  await page.getByLabel("Account", { exact: true }).selectOption("mcp-friend");
-  await expect(
-    page
-      .getByRole("row")
-      .filter({ hasText: "search_media" })
-      .getByRole("cell")
-      .nth(2),
-  ).toHaveText("9");
-  await expect(
-    page
-      .getByRole("row")
-      .filter({ hasText: "search_media" })
-      .getByRole("cell")
-      .nth(3),
-  ).toHaveText("2");
+  await choose(page, "Account", "mcp-friend");
+  const usage = page.getByRole("row").filter({ hasText: "search_media" });
+
+  await expect(usage).toContainText("Search media");
+  await expect(usage).toContainText("9");
+  await expect(usage).toContainText("2");
   await expect(page.getByLabel("Seerr URL", { exact: true })).toHaveCount(0);
   expect(writes).toHaveLength(0);
   await page.getByRole("link", { exact: true, name: "MCP settings" }).click();
   await expect(page).toHaveURL(/\/settings\/mcp$/);
+  await page.getByText("Advanced limits", { exact: true }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Tools \(/ })
+    .click();
   await page.getByLabel("Items per batch", { exact: true }).fill("30");
   await page
     .getByLabel("Write history entries per account", { exact: true })
@@ -209,7 +212,7 @@ test("MCP activity lists access and usage, copies connections and links to setti
     .click();
   await expect(
     page.getByRole("row").filter({ hasText: "search_media" }),
-  ).toContainText("Disabled");
+  ).toContainText("MCP disabled");
   const refreshed = page.waitForRequest(
     (request) =>
       new URL(request.url()).pathname === "/v1/mcp/status" &&
@@ -253,11 +256,8 @@ test("missing Seerr connection gates MCP setup and points to general Settings", 
   await expect(
     page.getByRole("button", { exact: true, name: "Copy Codex" }),
   ).toBeDisabled();
-  await page
-    .getByRole("link", { name: "Seerr connection in Settings" })
-    .click();
-  await expect(page).toHaveURL(/\/settings$/);
-  await page.getByRole("button", { exact: true, name: "Edit Seerr" }).click();
+  await page.getByRole("link", { name: "Review settings" }).click();
+  await expect(page).toHaveURL(/\/settings\?entry=seerr$/);
   await expect(page.getByLabel("Seerr URL", { exact: true })).toBeVisible();
 });
 
@@ -275,6 +275,11 @@ test("MCP settings conflicts preserve edits until explicitly reloaded", async ({
   const mock = await mockConfigEditor(page, configDocument);
 
   await connect("/settings/mcp");
+  await page.getByText("Advanced limits", { exact: true }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Tools \(/ })
+    .click();
   await page.getByLabel("Items per batch", { exact: true }).fill("25");
   mock.setConflict(true);
   configDocument.revision += 1;
@@ -303,6 +308,11 @@ test("MCP settings validate inputs and preserve unrelated configuration", async 
   const { writes } = await mockConfigEditor(page, document);
 
   await connect("/settings/mcp");
+  await page.getByText("Advanced limits", { exact: true }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Tools \(/ })
+    .click();
   await expect(
     page.getByRole("heading", { exact: true, name: "MCP server" }),
   ).toBeVisible();
@@ -355,7 +365,7 @@ test("MCP settings validate inputs and preserve unrelated configuration", async 
   expect(saved?.clients).toEqual(original.clients);
   expect(saved?.sources).toEqual(original.sources);
   expect(saved?.seerr).toEqual(original.seerr);
-  expect(saved?.feed).toEqual(original.feed);
+  expect(saved?.instance).toEqual(original.instance);
   expect(saved?.subscriptions).toEqual(original.subscriptions);
   await page.evaluate(() => scrollTo({ behavior: "instant", top: 0 }));
   await page.screenshot({
@@ -374,6 +384,11 @@ test("MCP settings explain missing Seerr and disable the master switch", async (
   const { writes } = await mockConfigEditor(page, document);
 
   await connect("/settings/mcp");
+  await page.getByText("Advanced limits", { exact: true }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Tools \(/ })
+    .click();
   await expect(page.getByLabel("Enable MCP", { exact: true })).toBeDisabled();
   await page
     .getByRole("link", { name: "Seerr connection in Settings" })
@@ -382,6 +397,11 @@ test("MCP settings explain missing Seerr and disable the master switch", async (
   document.settings.mcp.enabled = true;
   document.revision += 1;
   await connect("/settings/mcp");
+  await page.getByText("Advanced limits", { exact: true }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Tools \(/ })
+    .click();
   await expect(page.getByLabel("Enable MCP", { exact: true })).toBeChecked();
   await page.getByLabel("Enable MCP", { exact: true }).uncheck();
   await expect(page.getByLabel("Enable MCP", { exact: true })).toBeDisabled();
@@ -402,6 +422,11 @@ test("MCP settings remain editable when the tool registry is unavailable", async
     route.fulfill({ json: { error: "upstream_unavailable" }, status: 503 }),
   );
   await connect("/settings/mcp");
+  await page.getByText("Advanced limits", { exact: true }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Tools \(/ })
+    .click();
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
   await page.getByLabel("Items per batch", { exact: true }).fill("25");
   await page.getByLabel("Enable MCP", { exact: true }).uncheck();
@@ -437,6 +462,8 @@ test("a late registry preserves edits and disabled tools outside its response", 
             available: true,
             description: "Search the catalog",
             name: "search_media",
+            reason: null,
+            title: "Search media",
           },
         ],
         writes_supported: true,
@@ -444,6 +471,11 @@ test("a late registry preserves edits and disabled tools outside its response", 
     });
   });
   await connect("/settings/mcp");
+  await page.getByText("Advanced limits", { exact: true }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Tools \(/ })
+    .click();
   await page.getByLabel("Items per batch", { exact: true }).fill("28");
   await expect.poll(() => Boolean(release)).toBe(true);
   release?.();

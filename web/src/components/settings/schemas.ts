@@ -182,23 +182,26 @@ export const feedsSchema = z
   .object({
     enabled: z.boolean(),
     future_days: boundedNumber(numericFields.subscriptions.future_days),
-    link: httpUrl,
     max_subjects: boundedNumber(numericFields.subscriptions.max_subjects),
     past_days: boundedNumber(numericFields.subscriptions.past_days),
-    title: z
-      .string()
-      .trim()
-      .min(1, "Enter a title")
-      .refine(
-        (value) => new TextEncoder().encode(value).length <= 256,
-        "Use a shorter title (maximum 256 UTF-8 bytes)",
-      )
-      .refine(
-        (value) => !/[\p{Cc}\uFFFE\uFFFF]/u.test(value),
-        "Remove control characters from the title",
-      ),
   })
   .refine((value) => value.past_days + value.future_days <= 92, {
     message: "Past and future days must total at most 92",
     path: ["future_days"],
   });
+
+export const instanceSchema = z.object({
+  link: httpUrl,
+  title: z
+    .string()
+    .trim()
+    .min(1, "Enter a title")
+    .refine(
+      (value) => new TextEncoder().encode(value).length <= 256,
+      "Use a shorter title (maximum 256 UTF-8 bytes)",
+    )
+    .refine(
+      (value) => !/[\p{Cc}\uFFFE\uFFFF]/u.test(value),
+      "Remove control characters from the title",
+    ),
+});

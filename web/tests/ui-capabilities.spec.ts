@@ -15,7 +15,8 @@ test("Explorer scopes maintenance commands and presets the selected source", asy
 }) => {
   await connect("/explorer");
   await choose(page, "Source", "sonarr");
-  await choose(page, "Operation", "refresh_media");
+  await choose(page, "Operation", "Refresh metadata");
+  await page.getByRole("tab", { name: "Advanced JSON" }).click();
   await expect(page.getByLabel("Arguments (JSON)")).toHaveValue(
     /"source": "sonarr"/,
   );
@@ -23,7 +24,8 @@ test("Explorer scopes maintenance commands and presets the selected source", asy
     page.getByText("Writes to sonarr", { exact: true }),
   ).toBeVisible();
   await choose(page, "Source", "radarr");
-  await choose(page, "Operation", "refresh_media");
+  await choose(page, "Operation", "Refresh metadata");
+  await page.getByRole("tab", { name: "Advanced JSON" }).click();
   await expect(page.getByLabel("Arguments (JSON)")).toHaveValue(
     /"source": "radarr"/,
   );
@@ -32,7 +34,7 @@ test("Explorer scopes maintenance commands and presets the selected source", asy
   ).toBeVisible();
   await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
   await expect(
-    page.getByRole("option", { exact: true, name: "series_episodes" }),
+    page.getByRole("option", { exact: true, name: "Browse series episodes" }),
   ).toHaveCount(0);
 });
 
@@ -41,6 +43,7 @@ test("overview includes every installed source and normalized operational data",
   page,
 }, info) => {
   await connect();
+  await page.getByText("Diagnostics", { exact: true }).click();
   const sources = page.locator('[data-slot="card"]').filter({
     has: page.getByRole("heading", { exact: true, name: "Sources" }),
   });
@@ -60,23 +63,23 @@ test("overview includes every installed source and normalized operational data",
   }
 
   const monitoring = page.locator('[data-slot="card"]').filter({
-    has: page.getByRole("heading", { exact: true, name: "Monitoring" }),
+    has: page.getByRole("heading", { exact: true, name: "App activity" }),
   });
 
   await expect(
-    monitoring.getByRole("row").filter({ hasText: "sabnzbd" }),
+    monitoring.getByRole("listitem").filter({ hasText: "sabnzbd" }),
   ).toContainText("2 MiB/s");
   await expect(
-    monitoring.getByRole("row").filter({ hasText: "bazarr" }),
+    monitoring.getByRole("listitem").filter({ hasText: "bazarr" }),
   ).toContainText("Episode subtitle requirements12");
   await expect(
-    monitoring.getByRole("row").filter({ hasText: "cleanuparr" }),
+    monitoring.getByRole("listitem").filter({ hasText: "cleanuparr" }),
   ).toContainText("Removed in 7 days8");
   await expect(
-    monitoring.getByRole("row").filter({ hasText: "maintainerr" }),
-  ).toContainText("Collection sizes incomplete or overlapping");
+    monitoring.getByRole("listitem").filter({ hasText: "maintainerr" }),
+  ).toContainText("Reclaimable space is an estimate.");
   await expect(
-    page.getByText("Unmeasured library sizes", { exact: true }),
+    page.getByText("File sizes have not been measured.", { exact: true }),
   ).toHaveCount(2);
   expect(
     await page.evaluate(
@@ -264,7 +267,8 @@ test("Explorer discovers account commands and passes multiword inputs without na
     page.getByRole("combobox", { exact: true, name: "Source" }),
   ).toBeVisible();
   await choose(page, "Source", "seerr");
-  await choose(page, "Operation", "search_media");
+  await choose(page, "Operation", "Search for media");
+  await page.getByRole("tab", { exact: true, name: "Advanced JSON" }).click();
   await page
     .getByLabel("Arguments (JSON)", { exact: true })
     .fill('{"query":"Moonberry Express"}');
@@ -309,17 +313,19 @@ test("Explorer writes require an explicit account confirmation and never retry u
   });
   await connect("/explorer", requester);
   await choose(page, "Source", "seerr");
-  await choose(page, "Operation", "request_movie");
+  await choose(page, "Operation", "Request a movie");
   const run = page.getByRole("button", { exact: true, name: "Run command" });
   const confirmation = page.getByRole("checkbox", {
     name: "Apply this change to my account",
   });
 
   await expect(run).toBeDisabled();
+  await page.getByRole("tab", { exact: true, name: "Advanced JSON" }).click();
   await page
     .getByLabel("Arguments (JSON)", { exact: true })
     .fill('{"tmdb_id":42}');
   await confirmation.check();
+  await page.getByRole("tab", { exact: true, name: "Advanced JSON" }).click();
   await page
     .getByLabel("Arguments (JSON)", { exact: true })
     .fill('{"tmdb_id": 42}');
@@ -327,11 +333,11 @@ test("Explorer writes require an explicit account confirmation and never retry u
   await confirmation.check();
   await run.click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(
-    "mutation_outcome_unknown",
+    "The service may have accepted this action. Check its progress before trying again.",
   );
   await expect.poll(() => writes.length).toBe(1);
   await expect(run).toBeDisabled();
-  await choose(page, "Operation", "my_quota");
+  await choose(page, "Operation", "Request allowance");
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   expect(writes).toEqual([{ tmdb_id: 42 }]);
 });
@@ -349,7 +355,8 @@ test("Explorer rejects non-object arguments before sending a command", async ({
   });
   await connect("/explorer", requester);
   await choose(page, "Source", "seerr");
-  await choose(page, "Operation", "search_media");
+  await choose(page, "Operation", "Search for media");
+  await page.getByRole("tab", { exact: true, name: "Advanced JSON" }).click();
   await page.getByLabel("Arguments (JSON)", { exact: true }).fill("[]");
   await page.getByRole("button", { exact: true, name: "Run command" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(
@@ -388,21 +395,24 @@ test("one failed monitoring source retains healthy rows and a failed refresh lab
   });
   await connect();
   const monitoring = page.locator('[data-slot="card"]').filter({
-    has: page.getByRole("heading", { exact: true, name: "Monitoring" }),
+    has: page.getByRole("heading", { exact: true, name: "App activity" }),
   });
 
   await expect(
-    monitoring.getByText("Unavailable · upstream_timeout", { exact: true }),
+    monitoring.getByText("bazarr is unavailable.", { exact: true }),
   ).toBeVisible();
   await expect(monitoring.getByText("2 MiB/s", { exact: true })).toBeVisible();
   await page.route("**/v1/summaries/status", (route) =>
     route.fulfill({ json: { error: "upstream_unavailable" }, status: 503 }),
   );
   await page
-    .getByRole("button", { name: "Refresh monitoring from upstream" })
+    .getByRole("button", { name: "Refresh app activity from upstream" })
     .click();
-  await expect(monitoring.getByRole("alert")).toHaveText(
-    "upstream_unavailable · previous results",
+  await expect(monitoring.getByRole("alert").first()).toContainText(
+    "The service could not be reached.",
+  );
+  await expect(monitoring.getByRole("alert").first()).toContainText(
+    "Showing the previous result.",
   );
   await expect(monitoring.getByText("2 MiB/s", { exact: true })).toBeVisible();
 });
@@ -419,12 +429,13 @@ test("calendar-only access never requests operational projections or shows monit
     }
   });
   await connect("/", "fake-calendar-key-0000000000000000000");
+  await page.getByText("Diagnostics", { exact: true }).click();
   await expect(
     page.getByRole("heading", { exact: true, name: "Sources" }),
   ).toBeVisible();
   await expect(page.getByText("sabnzbd", { exact: true })).toHaveCount(0);
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
-  await choose(page, "Operation", "upcoming_releases");
+  await choose(page, "Operation", "Upcoming releases");
   await expect(
     page.getByRole("combobox", { exact: true, name: "Source" }),
   ).toBeVisible();

@@ -176,7 +176,7 @@ pub(crate) async fn public_feed(
     let data = load_for(&gateway, raw.as_deref(), sources).await?;
 
     if format == "calendar.rss" {
-        crate::rss::render(&gateway.feed, &data).map_err(HttpError)
+        crate::rss::render(&gateway.instance, &data).map_err(HttpError)
     } else {
         crate::ical::render(&data).map_err(HttpError)
     }

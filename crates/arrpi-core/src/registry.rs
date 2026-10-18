@@ -6,7 +6,7 @@ use serde_json::{Map, Value};
 use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 
 macro_rules! registry {
-    ($id:ident { $($variant:ident => ($name:literal, $args:ty, $description:literal, $write:literal, $fresh:literal, $native:literal, $page:literal)),+ $(,)? }) => {
+    ($id:ident { $($variant:ident => ($name:literal, $args:ty, $title:literal, $description:literal, $write:literal, $fresh:literal, $native:literal, $page:literal)),+ $(,)? }) => {
         /// Stable command identity shared by all protocol adapters.
         #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
         pub enum $id { $($variant),+ }
@@ -51,6 +51,12 @@ macro_rules! registry {
                 match self { $(Self::$variant => $page),+ }
             }
 
+            /// Human-facing operation label, shared by HTTP, MCP and the UI.
+            #[must_use]
+            pub const fn title(self) -> &'static str {
+                match self { $(Self::$variant => $title),+ }
+            }
+
             fn description(self) -> &'static str {
                 match self { $(Self::$variant => $description),+ }
             }
@@ -63,39 +69,40 @@ macro_rules! registry {
 }
 
 registry!(ToolId {
-    CancelRequest => ("cancel_request", args::Cancel, "Cancel only this account's pending request. Does not delete library media.", true, false, false, false),
-    CloseIssue => ("close_issue", args::IssueId, "Resolve an issue created by this account. Cannot close another user's issue.", true, false, false, false),
-    CloseIssuesBatch => ("close_issues_batch", args::BatchIssues, "Resolve multiple issues created by this account. Returns ordered outcomes and respects close_issue permissions/switches, batch size and write budget. Never closes another user's issue.", true, false, false, false),
-    LibrarySummary => ("library_summary", args::Fresh, "Read minimal native library counts and on-disk bytes without titles. Missing byte measurements stay unknown.", false, true, true, false),
-    ListIssues => ("list_issues", args::Page, "List issues reported by this account.", false, true, false, true),
-    ListMovies => ("list_movies", crate::library::LibraryFilter, "List installed movies. Search/filter this library, not the request catalog.", false, true, true, true),
-    ListSeries => ("list_series", crate::library::LibraryFilter, "List installed TV series. Availability describes files already in the library.", false, true, true, true),
-    MediaCommandStatus => ("media_command_status", crate::maintenance::CommandStatus, "Read fresh progress of a metadata refresh or automatic release search using its source and command_id. completed means the Arr command finished, not that media downloaded or imported. After refresh_media completes, inspect series_episodes or search_releases. Do not poll continuously.", false, false, true, false),
-    MediaDetails => ("media_details", args::Details, "Read movie/TV details and explicit availability from Seerr. no_cache requests a fresh read; availability can lag until Seerr syncs Plex.", false, true, false, false),
-    MediaDetailsBatch => ("media_details_batch", args::BatchDetails, "Read availability for multiple exact TMDB IDs with ordered per-item outcomes. Failed items do not hide later reads; rate limits, resource pressure or the total batch deadline stop the remainder. batch_timeout is safe to retry. no_cache refreshes Seerr reads, not its Plex sync.", false, true, false, false),
-    MonitoringStatus => ("monitoring_status", args::Fresh, "Read authorized SAB download, Cleanuparr cleanup/search, Bazarr subtitle requirement or Maintainerr cleanup counters. Each source reports its own freshness and metric semantics.", false, true, true, false),
-    MyQuota => ("my_quota", args::Fresh, "Read this account's native Seerr limits, usage, remaining allowance and rolling window. Movie units are movies; TV units are seasons. Always fresh.", false, true, false, false),
-    MyRequests => ("my_requests", args::Page, "List only this account's Seerr requests.", false, true, false, true),
-    QueueSummary => ("queue_summary", args::Fresh, "Read bounded queue counters for explicitly authorized sources. complete=false means only part of a changing or excessive queue was observed. No job titles or paths.", false, true, true, false),
-    RefreshMedia => ("refresh_media", crate::maintenance::MediaTarget, "Refresh metadata and scan one existing movie or TV series in its native Arr source. Use source and native id from search_library, not a TMDB ID. Updates TV episode metadata but does not search indexers. Returns an asynchronous command_id; wait for completion with media_command_status before checking for new/missing episodes or calling search_releases. Does not add media or change monitoring/profiles/tags. Never automatically retry unknown_outcome.", true, false, true, false),
-    ReportIssue => ("report_issue", args::Issue, "Report a video/audio/subtitle/other issue for media tracked by Seerr as this account.", true, false, false, false),
-    RequestMediaBatch => ("request_media_batch", args::BatchRequests, "Request multiple movies/TV seasons through Seerr as this account. Returns ordered per-item outcomes; never retry unknown_outcome automatically. Never requests 4K.", true, false, false, false),
-    RequestMovie => ("request_movie", args::Movie, "Request an exact movie TMDB ID through Seerr as this account. Omit profile/null keeps Seerr settings; otherwise use an exact request_profiles name. Checks duplicates fresh and never requests 4K. No automatic retries after unknown_outcome; inspect media details and my_requests first.", true, false, false, false),
-    RequestProfiles => ("request_profiles", args::Profiles, "List Seerr's current non-4K request profiles and configured ordinary/anime defaults where reported. Omit profile or use null for Seerr's configured default; any string is an exact profile name and requires the human advanced chooser permission.", false, true, false, false),
-    RequestSeries => ("request_series", args::Series, "Request explicit positive season numbers through Seerr as this account. Optional profile is an exact request_profiles name; omit/null keeps Seerr settings. Checks duplicates fresh and reports accepted/skipped seasons; never requests specials or 4K. Reconcile unknown_outcome before resubmitting.", true, false, false, false),
-    RequestStatus => ("request_status", args::Request, "Read the status of a request owned by this account. Approval is not download completion.", false, true, false, false),
-    SearchLibrary => ("search_library", crate::library::LibraryFilter, "Search the installed library using structured genre, year, rating and availability filters. Returns plots, genres, ratings, runtime and file availability; use next_offset to paginate and tmdb_id for requests (id is native Arr). Check complete/source status before claiming absence. Not the request catalog. no_cache refreshes native snapshots.", false, true, true, true),
-    SearchMedia => ("search_media", args::Search, "Search Seerr's requestable movie/TV catalog with spaces or punctuation. Returns candidates with tmdb_id, title, year, media_type and availability; choose the exact match before requesting.", false, true, false, false),
-    SearchReleases => ("search_releases", crate::maintenance::ReleaseSearch, "Trigger an automatic indexer search for one existing movie/series, a TV season or explicit native episode_ids. Resolve source and native item_id with search_library. Defaults to monitored, aired missing content; missing_only=false also allows profile-governed upgrades. Movie profiles remain unchanged; profiles allowing 4K are refused. No monitoring changes or manual release grabs. Returns a command receipt, not download completion. Never automatically retry unknown_outcome; inspect media_command_status and the queue.", true, false, true, false),
-    SeriesEpisodes => ("series_episodes", crate::maintenance::Episodes, "List fresh structured episodes from one installed Sonarr series using source and native item_id. Supports season, missing_only, aired_only and offset/limit pagination; returns episode IDs, dates, monitoring and file availability. Aired missing episodes are candidates for search_releases. Refresh metadata first when checking for newly announced episodes; this read itself does not scan or download.", false, false, true, true),
-    ServiceStatus => ("service_status", args::Fresh, "Check authorized Seerr/Arr reachability and health cache age. no_cache probes upstreams fresh; source failures are independent.", false, true, true, false),
-    UpcomingReleases => ("upcoming_releases", args::Dates, "Read the monitored release calendar for an explicit date window, at most 93 days.", false, true, true, false)
+    CancelRequest => ("cancel_request", args::Cancel, "Cancel request", "Cancel only this account's pending request. Does not delete library media.", true, false, false, false),
+    CloseIssue => ("close_issue", args::IssueId, "Close issue", "Resolve an issue created by this account. Cannot close another user's issue.", true, false, false, false),
+    CloseIssuesBatch => ("close_issues_batch", args::BatchIssues, "Close issues in batch", "Resolve multiple issues created by this account. Returns ordered outcomes and respects close_issue permissions/switches, batch size and write budget. Never closes another user's issue.", true, false, false, false),
+    LibrarySummary => ("library_summary", args::Fresh, "Library totals", "Read minimal native library counts and on-disk bytes without titles. Missing byte measurements stay unknown.", false, true, true, false),
+    ListIssues => ("list_issues", args::Page, "Browse issues", "List issues reported by this account.", false, true, false, true),
+    ListMovies => ("list_movies", crate::library::LibraryFilter, "Browse movies", "List installed movies. Search/filter this library, not the request catalog.", false, true, true, true),
+    ListSeries => ("list_series", crate::library::LibraryFilter, "Browse TV shows", "List installed TV series. Availability describes files already in the library.", false, true, true, true),
+    MediaCommandStatus => ("media_command_status", crate::maintenance::CommandStatus, "Check command progress", "Read fresh progress of a metadata refresh or automatic release search using its source and command_id. completed means the Arr command finished, not that media downloaded or imported. After refresh_media completes, inspect series_episodes or search_releases. Do not poll continuously.", false, false, true, false),
+    MediaDetails => ("media_details", args::Details, "Media details", "Read movie/TV details and explicit availability from Seerr. no_cache requests a fresh read; availability can lag until Seerr syncs Plex.", false, true, false, false),
+    MediaDetailsBatch => ("media_details_batch", args::BatchDetails, "Media details in batch", "Read availability for multiple exact TMDB IDs with ordered per-item outcomes. Failed items do not hide later reads; rate limits, resource pressure or the total batch deadline stop the remainder. batch_timeout is safe to retry. no_cache refreshes Seerr reads, not its Plex sync.", false, true, false, false),
+    MonitoringStatus => ("monitoring_status", args::Fresh, "App activity", "Read authorized SAB download, Cleanuparr cleanup/search, Bazarr subtitle requirement or Maintainerr cleanup counters. Each source reports its own freshness and metric semantics.", false, true, true, false),
+    MyQuota => ("my_quota", args::Fresh, "Request allowance", "Read this account's native Seerr limits, usage, remaining allowance and rolling window. Movie units are movies; TV units are seasons. Always fresh.", false, true, false, false),
+    MyRequests => ("my_requests", args::Page, "My requests", "List only this account's Seerr requests.", false, true, false, true),
+    QueueSummary => ("queue_summary", args::Fresh, "Download queue", "Read bounded queue counters for explicitly authorized sources. complete=false means only part of a changing or excessive queue was observed. No job titles or paths.", false, true, true, false),
+    RefreshMedia => ("refresh_media", crate::maintenance::MediaTarget, "Refresh metadata", "Refresh metadata and scan one existing movie or TV series in its native Arr source. Use source and native id from search_library, not a TMDB ID. Updates TV episode metadata but does not search indexers. Returns an asynchronous command_id; wait for completion with media_command_status before checking for new/missing episodes or calling search_releases. Does not add media or change monitoring/profiles/tags. Never automatically retry unknown_outcome.", true, false, true, false),
+    ReportIssue => ("report_issue", args::Issue, "Report an issue", "Report a video/audio/subtitle/other issue for media tracked by Seerr as this account.", true, false, false, false),
+    RequestMediaBatch => ("request_media_batch", args::BatchRequests, "Request media in batch", "Request multiple movies/TV seasons through Seerr as this account. Returns ordered per-item outcomes; never retry unknown_outcome automatically. Never requests 4K.", true, false, false, false),
+    RequestMovie => ("request_movie", args::Movie, "Request a movie", "Request an exact movie TMDB ID through Seerr as this account. Omit profile/null keeps Seerr settings; otherwise use an exact request_profiles name. Checks duplicates fresh and never requests 4K. No automatic retries after unknown_outcome; inspect media details and my_requests first.", true, false, false, false),
+    RequestProfiles => ("request_profiles", args::Profiles, "Request profiles", "List Seerr's current non-4K request profiles and configured ordinary/anime defaults where reported. Omit profile or use null for Seerr's configured default; any string is an exact profile name and requires the human advanced chooser permission.", false, true, false, false),
+    RequestSeries => ("request_series", args::Series, "Request TV seasons", "Request explicit positive season numbers through Seerr as this account. Optional profile is an exact request_profiles name; omit/null keeps Seerr settings. Checks duplicates fresh and reports accepted/skipped seasons; never requests specials or 4K. Reconcile unknown_outcome before resubmitting.", true, false, false, false),
+    RequestStatus => ("request_status", args::Request, "Check request progress", "Read the status of a request owned by this account. Approval is not download completion.", false, true, false, false),
+    SearchLibrary => ("search_library", crate::library::LibraryFilter, "Search the library", "Search the installed library using structured genre, year, rating and availability filters. Returns plots, genres, ratings, runtime and file availability; use next_offset to paginate and tmdb_id for requests (id is native Arr). Check complete/source status before claiming absence. Not the request catalog. no_cache refreshes native snapshots.", false, true, true, true),
+    SearchMedia => ("search_media", args::Search, "Search for media", "Search Seerr's requestable movie/TV catalog with spaces or punctuation. Returns candidates with tmdb_id, title, year, media_type and availability; choose the exact match before requesting.", false, true, false, false),
+    SearchReleases => ("search_releases", crate::maintenance::ReleaseSearch, "Search for releases", "Trigger an automatic indexer search for one existing movie/series, a TV season or explicit native episode_ids. Resolve source and native item_id with search_library. Defaults to monitored, aired missing content; missing_only=false also allows profile-governed upgrades. Movie profiles remain unchanged; profiles allowing 4K are refused. No monitoring changes or manual release grabs. Returns a command receipt, not download completion. Never automatically retry unknown_outcome; inspect media_command_status and the queue.", true, false, true, false),
+    SeriesEpisodes => ("series_episodes", crate::maintenance::Episodes, "Browse series episodes", "List fresh structured episodes from one installed Sonarr series using source and native item_id. Supports season, missing_only, aired_only and offset/limit pagination; returns episode IDs, dates, monitoring and file availability. Aired missing episodes are candidates for search_releases. Refresh metadata first when checking for newly announced episodes; this read itself does not scan or download.", false, false, true, true),
+    ServiceStatus => ("service_status", args::Fresh, "Service health", "Check authorized Seerr/Arr reachability and health cache age. no_cache probes upstreams fresh; source failures are independent.", false, true, true, false),
+    UpcomingReleases => ("upcoming_releases", args::Dates, "Upcoming releases", "Read the monitored release calendar for an explicit date window, at most 93 days.", false, true, true, false)
 });
 
 /// Protocol-independent operation descriptor with a shared immutable input schema.
 #[derive(Clone, Debug)]
 pub struct ToolDefinition {
     pub name: Cow<'static, str>,
+    pub title: Cow<'static, str>,
     pub description: Cow<'static, str>,
     input_schema: InputSchema,
     pub effects: Effects,
@@ -118,6 +125,7 @@ pub struct CommandCatalog {
 #[serde(rename_all = "camelCase")]
 pub struct CommandDescriptor {
     pub name: Cow<'static, str>,
+    pub title: Cow<'static, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
     /// Sources permitted for commands that accept an explicit source argument.
@@ -144,6 +152,7 @@ impl From<ToolDefinition> for CommandDescriptor {
 
         Self {
             name: definition.name,
+            title: definition.title,
             source: None,
             sources: Vec::new(),
             description: definition.description,
@@ -230,6 +239,7 @@ impl ToolDefinition {
     pub fn remote(id: ToolId, description: Option<String>, input_schema: InputSchema) -> Self {
         Self {
             name: Cow::Borrowed(id.name()),
+            title: Cow::Borrowed(id.title()),
             description: description.map_or_else(|| Cow::Borrowed(id.description()), Cow::Owned),
             input_schema,
             effects: Effects::for_tool(id),
@@ -256,6 +266,7 @@ impl Registry {
                     configure(&mut input, limits);
                     ToolDefinition {
                         name: Cow::Borrowed(id.name()),
+                        title: Cow::Borrowed(id.title()),
                         description: Cow::Borrowed(id.description()),
                         input_schema: input.into(),
                         effects: Effects::for_tool(*id),

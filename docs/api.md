@@ -63,7 +63,7 @@ account-scoped MCP `service_status` tool.
 RSS and iCalendar use the same scoped, bounded calendar/cache; a failed authorized
 source returns 502 rather than a successful partial feed. RSS uses stable non-permalink GUIDs and validated IMDb links. `pubDate` represents the release timestamp (UTC midnight for all-day
 movie dates), not the time ArrPi discovered the item. Item descriptions report current
-library availability. Feed metadata comes from `feed.title` and `feed.link`;
+library availability. Feed metadata comes from `instance.title` and `instance.link`;
 the public website link must contain no credentials, query or fragment.
 Normal API-key exports require an Authorization header and explicit dates. Personal
 capabilities are accepted only for RSS/iCalendar: through `/feeds/{token}/...`, the

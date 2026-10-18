@@ -3,11 +3,15 @@
 ## Setup
 
 Configure Seerr's internal URL/API key and catalog language in **Settings**. Give each
-account its own client key with its Seerr user ID and stable Plex user ID. Only Plex-bound Seerr accounts are supported; local, Jellyfin and Emby users cannot be bound. The catalog language defaults to English (`en`); change it in the Seerr connection settings. Open **Settings → MCP**
+account its own client key and select its verified requester account in **Settings → Access**. The picker binds both the Seerr ID and stable Plex ID. Only Plex-bound Seerr accounts are supported; local, Jellyfin and Emby users cannot be bound. The catalog language defaults to English (`en`); change it in the Seerr connection settings. Open **Settings → MCP**
 at `/settings/mcp` to enable the server and tune tools/limits. The **MCP** page at `/mcp` contains connections, account access, usage statistics and write history. MCP transport requires a saved Seerr connection.
 The page has separate **Copy Claude Code**, **Copy Codex** and **Copy Gemini CLI** buttons. Each copies one complete install command with the selected account token. Claude/Gemini use native HTTP with user scope. The generated Codex command uses `mcp-remote` through `npx` to supply a literal Bearer header; Node/npx is required on that client machine, not in core.
 
-The activity page shows per-account grants; global tool switches live in **Settings → MCP**. Admin/configuration keys cannot be copied as MCP credentials. Account tools fail closed for deleted/mismatched Seerr accounts and recheck native permissions on every call. Library maintenance uses separate source grants. Tokens, bindings and connection settings live in SQLite.
+The activity page separates searchable write history from tools and usage. History searches all retained entries for the selected account and filters by action, outcome and time. Accepted commands remain distinct from completed commands; the progress dialog only reads their status. Older records without receipt titles retain their coordinates.
+
+The instance title and public website in **Settings → General** identify the stack in MCP initialization, together with refresh/search workflow instructions.
+
+The activity page shows effective per-account access and its reason; global tool switches live in **Settings → MCP**. Admin/configuration keys cannot be copied as MCP credentials. Account tools fail closed for deleted/mismatched Seerr accounts and recheck native permissions on every call. Library maintenance uses separate source grants. Tokens, bindings and connection settings live in SQLite.
 
 `/v1/mcp` is a stateless Streamable HTTP endpoint. Configure a public
 HTTPS endpoint in Settings, route that exact path to ArrPi, and supply the account's
@@ -145,3 +149,5 @@ Installed movies include audio/subtitle summaries, video codec and file quality 
 `request_profiles` reports the configured ordinary and anime defaults as IDs/names, even when the account cannot choose an explicit profile. Submitting `profile:null` still delegates selection to Seerr. Request summaries include native creation/update times and optional titles/release dates where supplied. The pinned Seerr request-list API does not provide titles; ArrPi does not fan out to TMDB for each request. Submit/duplicate receipts reuse title/date metadata already fetched by their preflight.
 
 Seerr 3.5.0 has no reliable ordinary-account endpoint for the last completed full Plex sync. Its [admin-only sync status](https://github.com/seerr-team/seerr/blob/v3.5.0/server/routes/settings/index.ts) exposes progress, and its [scanner library lastScan](https://github.com/seerr-team/seerr/blob/v3.5.0/server/lib/scanners/plex/index.ts) is updated by recent-item scans rather than all full scans. ArrPi therefore does not label either value as a completed full-sync timestamp. Fresh ArrPi reads cannot force Seerr's Plex sync.
+
+Operator history endpoint `GET /v1/config/mcp/audit` accepts `client`, `offset`, `limit`, optional fuzzy `query` (128 characters), exact `tool` and `outcome`, and RFC3339 `since`. Filtering spans all retained entries within one account; pagination stays newest first. Read access requires `config:manage`; this does not expose history to MCP requesters.

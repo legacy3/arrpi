@@ -77,7 +77,7 @@ async fn live_saves_retain_jwks_during_outages_but_revoke_bindings_and_disable_o
     drop(authority);
     let mut document = read(&api, &admin_key).await;
 
-    document["settings"]["feed"]["title"] = json!("Unrelated title update");
+    document["settings"]["instance"]["title"] = json!("Unrelated title update");
     save(&api, &admin_key, document).await;
     assert_eq!(
         rpc(&api, &token, "tools/call").await.status(),

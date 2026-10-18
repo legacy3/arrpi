@@ -77,6 +77,7 @@ pub struct SourceInfo {
 #[derive(Debug, JsonSchema, Serialize)]
 pub struct Status {
     pub config_manage: bool,
+    pub instance: crate::config::Instance,
     pub version: &'static str,
     pub cache: CachePolicy,
     pub sources: Vec<SourceInfo>,
@@ -158,6 +159,8 @@ pub struct Calendar {
 #[derive(Debug, JsonSchema, Serialize)]
 pub struct ToolVisibility {
     pub name: String,
+    pub title: String,
+    pub reason: Option<String>,
     pub description: String,
     pub available: bool,
 }
@@ -193,6 +196,9 @@ pub struct ToolStatsPage {
 /// Whitelisted coordinates of a write attempt; free text is never recorded.
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema, Serialize)]
 pub struct AuditTarget {
+    /// Bounded upstream metadata captured from a verified mutation receipt.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -277,4 +283,20 @@ impl EventKind {
             Self::Physical => "physical",
         }
     }
+}
+
+/// Verified Plex-linked requester identity, without email or native credentials.
+#[derive(Debug, JsonSchema, Serialize)]
+pub struct LinkedAccount {
+    pub id: u64,
+    pub plex_id: u64,
+    pub name: String,
+}
+
+/// Operator account chooser follows native pagination without a hidden cutoff.
+#[derive(Debug, JsonSchema, Serialize)]
+pub struct LinkedAccountPage {
+    pub items: Vec<LinkedAccount>,
+    pub offset: usize,
+    pub next_offset: Option<usize>,
 }

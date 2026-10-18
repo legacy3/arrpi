@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { RememberedLink, useRememberedHref } from "@/components/view-state";
 import { cn } from "@/lib/utils";
 
 export type Tab = "overview" | "calendar" | "explorer" | "settings" | "mcp";
@@ -40,6 +41,7 @@ type ShellProps = Readonly<{
   connected: boolean;
   configManage?: boolean;
   version?: string;
+  instance?: string;
   disconnect?: () => void;
   refresh?: () => void;
   refreshing?: boolean;
@@ -55,6 +57,7 @@ export function Shell({
   configManage = false,
   connected,
   disconnect,
+  instance,
   refresh,
   refreshing,
   tab,
@@ -88,7 +91,7 @@ export function Shell({
           </div>
           <Breadcrumb className="hidden md:block">
             <BreadcrumbList>
-              <BreadcrumbItem>ArrPi</BreadcrumbItem>
+              <BreadcrumbItem>{instance ?? "ArrPi"}</BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage>{title}</BreadcrumbPage>
@@ -170,6 +173,8 @@ export function tabForPath(path: string): Tab {
 }
 
 function Brand() {
+  const href = useRememberedHref("/");
+
   return (
     <Button
       variant="ghost"
@@ -177,7 +182,7 @@ function Brand() {
       aria-label="ArrPi overview"
       asChild
     >
-      <Link href="/" prefetch={false}>
+      <Link href={href} prefetch={false}>
         <Image
           src="/arrpi-mark.png"
           width={40}
@@ -203,7 +208,7 @@ function Connection({
       size="sm"
       disabled={!connected || !disconnect}
       aria-label={
-        connected && disconnect ? "Connected — Disconnect" : undefined
+        connected && disconnect ? "ArrPi connected. Disconnect" : undefined
       }
       onClick={disconnect}
       className="w-full justify-start gap-2 text-xs text-muted-foreground disabled:opacity-100"
@@ -214,7 +219,7 @@ function Connection({
           connected && "bg-emerald-400",
         )}
       />
-      {connected ? "Connected" : "Not connected"}
+      {connected ? "ArrPi connected" : "Not connected"}
       {connected && disconnect && <LogOut className="ml-auto size-3.5" />}
     </Button>
   );
@@ -266,9 +271,9 @@ function Navigation({
               )}
             >
               {connected ? (
-                <Link href={href} prefetch={false}>
+                <RememberedLink href={href} prefetch={false}>
                   {content}
-                </Link>
+                </RememberedLink>
               ) : (
                 content
               )}

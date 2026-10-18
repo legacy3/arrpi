@@ -11,6 +11,7 @@ import { Notice } from "@/components/notice";
 import { Access } from "@/components/settings/access";
 import { Connections } from "@/components/settings/connections";
 import { Feeds } from "@/components/settings/feeds";
+import { General } from "@/components/settings/general";
 import { McpSettings } from "@/components/settings/mcp";
 import { OAuth } from "@/components/settings/oauth";
 import { Server } from "@/components/settings/server";
@@ -18,6 +19,12 @@ import { Button } from "@/components/ui/button";
 import { useApiQuery } from "@/lib/use-api-query";
 
 const sections = [
+  {
+    component: General,
+    href: "/settings/general",
+    id: "general",
+    label: "General",
+  },
   {
     component: Connections,
     href: "/settings",
@@ -46,7 +53,7 @@ export function Settings({ api }: Readonly<{ api: Api }>) {
   const query = useApiQuery<SettingsEnvelope>(api, "/v1/config");
   const [message, setMessage] = useState<string>();
   const selected =
-    sections.find((section) => section.href === path) ?? sections[0];
+    sections.find((section) => section.href === path) ?? sections[1];
   const Active = selected.component;
 
   return (

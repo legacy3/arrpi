@@ -7,10 +7,12 @@ import { type z } from "zod";
 import type { Api } from "@/lib/api";
 import type { SettingsDocument, SettingsEnvelope } from "@/lib/settings";
 
+import { Choice } from "@/components/choice";
+import { DirtyFormGuard } from "@/components/dirty-form-guard";
 import { FormActions } from "@/components/form-actions";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useConfigMutation } from "@/lib/use-config-mutation";
-import { cn } from "@/lib/utils";
 
 export type EditorProps = Readonly<{
   api: Api;
@@ -29,23 +31,6 @@ function Control({
   label,
 }: Readonly<{ children: ReactNode; label: string; inline?: boolean }>) {
   const field = useFieldContext<unknown>();
-  const errors = field.state.meta.isTouched ? field.state.meta.errors : [];
-  const messages = [
-    ...new Set(
-      errors.map((error: unknown) => {
-        if (typeof error === "string") {
-          return error;
-        }
-
-        return error &&
-          typeof error === "object" &&
-          "message" in error &&
-          typeof error.message === "string"
-          ? error.message
-          : "Invalid value";
-      }),
-    ),
-  ];
 
   return (
     <div
@@ -60,15 +45,7 @@ function Control({
         {label}
       </label>
       {!inline && children}
-      {messages.length > 0 && (
-        <p
-          id={`${field.name}-error`}
-          role="alert"
-          className={cn("text-xs text-destructive", inline && "basis-full")}
-        >
-          {messages.join(". ")}
-        </p>
-      )}
+      <Errors />
     </div>
   );
 }
@@ -106,6 +83,11 @@ function Editor({
       }}
       className="grid gap-5"
     >
+      <form.Subscribe selector={(state) => state.isDirty}>
+        {(dirty) => (
+          <DirtyFormGuard dirty={dirty && !mutation.isPending && !message} />
+        )}
+      </form.Subscribe>
       <fieldset disabled={mutation.isPending} className="grid min-w-0 gap-4">
         {children}
       </fieldset>
@@ -123,6 +105,37 @@ function Editor({
       </form.Subscribe>
     </form>
   );
+}
+
+function Errors() {
+  const field = useFieldContext<unknown>();
+  const errors = field.state.meta.isTouched ? field.state.meta.errors : [];
+  const messages = [
+    ...new Set(
+      errors.map((error: unknown) => {
+        if (typeof error === "string") {
+          return error;
+        }
+
+        return error &&
+          typeof error === "object" &&
+          "message" in error &&
+          typeof error.message === "string"
+          ? error.message
+          : "Invalid value";
+      }),
+    ),
+  ];
+
+  return messages.length > 0 ? (
+    <p
+      id={`${field.name}-error`}
+      role="alert"
+      className="text-xs text-destructive"
+    >
+      {messages.join(". ")}
+    </p>
+  ) : null;
 }
 
 function NumberInput({
@@ -163,26 +176,17 @@ function Select({
 
   return (
     <Control label={label}>
-      <select
+      <Choice
         id={field.name}
-        name={field.name}
+        label={label}
         value={field.state.value}
-        onChange={(event) => field.handleChange(event.target.value)}
-        onBlur={field.handleBlur}
-        className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
-        aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
-        aria-describedby={
-          field.state.meta.isTouched && !field.state.meta.isValid
-            ? `${field.name}-error`
-            : undefined
-        }
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+        onChange={(value) => {
+          field.handleChange(value);
+          field.handleBlur();
+        }}
+        options={options.map((value) => ({ label: value, value }))}
+        className="w-full"
+      />
     </Control>
   );
 }
@@ -225,14 +229,13 @@ function Toggle({
 
   return (
     <Control label={label} inline>
-      <input
-        type="checkbox"
+      <Checkbox
         disabled={disabled}
         id={field.name}
         name={field.name}
         checked={field.state.value}
         onBlur={field.handleBlur}
-        onChange={(event) => field.handleChange(event.target.checked)}
+        onCheckedChange={(checked) => field.handleChange(checked === true)}
         aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
         aria-describedby={
           field.state.meta.isTouched && !field.state.meta.isValid
@@ -245,7 +248,14 @@ function Toggle({
 }
 
 const { useAppForm } = createFormHook({
-  fieldComponents: { Number: NumberInput, Select, Text, Toggle },
+  fieldComponents: {
+    Control,
+    Errors,
+    Number: NumberInput,
+    Select,
+    Text,
+    Toggle,
+  },
   fieldContext,
   formComponents: { Editor },
   formContext,

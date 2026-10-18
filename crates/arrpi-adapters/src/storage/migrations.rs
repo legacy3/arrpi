@@ -4,7 +4,10 @@ use arrpi_core::error::ApiError;
 use rusqlite::Connection;
 use rusqlite_migration::{Error, M, MigrationDefinitionError, Migrations};
 
-const STEPS: &[M<'static>] = &[M::up(include_str!("migrations/001_initial.sql"))];
+const STEPS: &[M<'static>] = &[
+    M::up(include_str!("migrations/001_initial.sql")),
+    M::up(include_str!("migrations/002_instance.sql")),
+];
 const MIGRATIONS: Migrations<'static> = Migrations::from_slice(STEPS);
 
 pub(super) fn apply(connection: &mut Connection) -> Result<(), ApiError> {

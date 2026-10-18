@@ -10,6 +10,7 @@ import type { SettingsDocument } from "@/lib/settings";
 
 import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
+import { SearchableChoice } from "@/components/searchable-choice";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { mcpClients, mcpConnection } from "@/lib/mcp-connection";
@@ -54,22 +55,21 @@ export function McpConnections({
             <Label className="w-14 shrink-0" htmlFor="mcp-account">
               Account
             </Label>
-            <select
+            <SearchableChoice
               id="mcp-account"
-              className="min-w-0 max-w-full flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+              label="Account"
               value={selected}
+              options={clients.map((client) => ({
+                label: client.name,
+                value: client.name,
+              }))}
               disabled={copy.isPending}
-              onChange={(event) => {
+              onChange={(value) => {
                 copy.reset();
-                onSelect(event.target.value);
+                onSelect(value);
               }}
-            >
-              {clients.map((value) => (
-                <option key={value.name} value={value.name}>
-                  {value.name}
-                </option>
-              ))}
-            </select>
+              className="min-w-0 flex-1"
+            />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

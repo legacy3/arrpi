@@ -10,6 +10,7 @@ use serde_json::{Value, json};
 #[derive(JsonSchema, serde::Serialize)]
 struct Contracts {
     settings: SettingsEnvelope,
+    accounts: crate::contracts::LinkedAccountPage,
     status: Status,
     calendar: Calendar,
     mcp: McpStatus,

@@ -21,3 +21,21 @@ fn confirmed_episode_scope_replaces_requested_ids_but_failure_retains_request() 
     assert_eq!(season.episode_ids, Some(vec![1, 6]));
     assert_eq!(season.season, Some(1));
 }
+
+#[test]
+fn audit_titles_come_only_from_validated_receipts() {
+    let input = target(&json!({"tmdb_id":42,"title":"Untrusted draft"}));
+
+    assert_eq!(input.title, None);
+    let verified = merge(input.clone(), &json!({"title":"Äpfel im All"}));
+
+    assert_eq!(verified.title.as_deref(), Some("Äpfel im All"));
+
+    for title in [
+        " ".to_owned(),
+        "invalid\ncontrol".to_owned(),
+        "x".repeat(1025),
+    ] {
+        assert_eq!(merge(input.clone(), &json!({"title":title})).title, None);
+    }
+}

@@ -28,7 +28,7 @@ test("large Explorer responses scroll inside the output instead of growing the p
     page.getByRole("combobox", { exact: true, name: "Source" }),
   ).toBeFocused();
   await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
-  await page.getByRole("option", { exact: true, name: "series" }).click();
+  await page.getByRole("option", { exact: true, name: "TV shows" }).click();
   await page.getByRole("button", { exact: true, name: "Fetch" }).click();
   const output = page.getByLabel("Native JSON response", { exact: true });
 
@@ -64,9 +64,9 @@ test("server validation reasons stay next to the shared save action", async ({
         })
       : route.fallback());
   });
-  await connect("/settings/feeds");
+  await connect("/settings/general");
   await page
-    .getByLabel("Site URL", { exact: true })
+    .getByLabel("Public website", { exact: true })
     .fill("https://example.invalid/");
   const save = page.getByRole("button", { exact: true, name: "Save" });
 
@@ -87,7 +87,7 @@ test("setup hints do not announce themselves as errors", async ({
   await mockConfigEditor(page, configDocument);
   await connect("/mcp");
   await expect(
-    page.getByText("to enable MCP.", { exact: false }),
+    page.getByText("Configure Seerr to enable MCP", { exact: false }),
   ).toBeVisible();
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
 });
@@ -104,7 +104,7 @@ test("entry editors focus their headings when opened", async ({
     page.getByRole("heading", { exact: true, name: "Add source" }),
   ).toBeFocused();
   await expect(page.getByLabel("URL", { exact: true })).toBeVisible();
-  await page.getByRole("button", { exact: true, name: "Back" }).click();
+  await page.getByRole("link", { exact: true, name: "Back" }).click();
   await expect(
     page.getByRole("heading", { exact: true, name: "Connections" }),
   ).toBeFocused();
@@ -125,7 +125,7 @@ test("successful saves show their outcome beside the pinned action", async ({
   page,
 }) => {
   await mockConfigEditor(page, configDocument);
-  await connect("/settings/feeds");
+  await connect("/settings/general");
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   const outcome = page
     .getByRole("status")

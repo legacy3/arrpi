@@ -13,7 +13,7 @@ For a source build, `ARRPI_DATABASE` (or `--database`) selects the SQLite file f
 
 ## Editing settings
 
-The UI separates **Connections** (`/settings`), **Access** (`/settings/access`), **Feeds** (`/settings/feeds`) **Server** (`/settings/server`) and **OAuth** (`/settings/oauth`). Connections and clients have individual editors; each save updates that item or section while preserving the rest of the document. Blank credential fields keep existing keys. Source removal is blocked while clients still reference it; edit their permissions in Access first.
+The UI separates **General** (`/settings/general`), **Connections** (`/settings`), **Access** (`/settings/access`), **Feeds** (`/settings/feeds`), **MCP** (`/settings/mcp`), **Server** (`/settings/server`) and **OAuth** (`/settings/oauth`). Connections and clients have individual editors; each save updates that item or section while preserving the rest of the document. Blank credential fields keep existing keys. Source removal is blocked while clients still reference it; edit their permissions in Access first.
 
 [External OAuth](oauth.md) has a separate settings page for its authorization server and account bindings. It is disabled by default.
 
@@ -23,7 +23,9 @@ separate requester client for Seerr actions.
 UI and CLI edits use the same admin API. `GET /v1/config` returns a revision and
 redacted settings; `PUT /v1/config` validates the complete document, preserves null
 secret fields by source/client identity, and rejects an outdated revision with 409.
-Source URLs/keys, client permissions/keys, feed settings and cache policy apply
+The instance title and public website live in General and identify this stack in the UI, feeds and MCP initialization.
+
+Source URLs/keys, client permissions/keys, instance/feed settings and cache policy apply
 immediately. Listener address and connection-lifetime/count changes require a
 restart. Docker's fixed listen override controls container networking.
 
@@ -139,3 +141,5 @@ An explicit IP or one named Docker network is required; CIDR ranges and implicit
 Probes use common ports for Sonarr, Radarr, Prowlarr, SABnzbd, Seerr, Bazarr, Maintainerr, Cleanuparr, Plex, Tautulli and ArrPi. At most 64 addresses and eight concurrent requests are permitted, with two-second request and thirty-second overall deadlines. The report includes every completed probe and marks deadline truncation incomplete with a failing exit status. TLS probes use normal certificate validation.
 
 No credentials, cookies, redirects or mutations are used. A listening port is only a hint: `expected` comes from the port convention, while `detected` requires an identifying native response. An authentication challenge or generic liveness response stays unidentified. Discovery neither guesses API keys nor saves connections; inspect the report and add verified services through Settings.
+
+The Access editor selects verified Plex-linked Seerr accounts and source permissions, and can generate a client key. Account lookup uses operator access through `GET /v1/config/accounts?offset=0`; responses contain only ID, Plex ID and display name. Draft credentials stay in memory. Unsaved settings prompt before navigation.

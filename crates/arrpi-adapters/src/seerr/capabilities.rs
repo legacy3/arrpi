@@ -191,6 +191,15 @@ impl CatalogSource for Backend {
 
 #[async_trait]
 impl AccountSource for Backend {
+    async fn linked_accounts(
+        &self,
+        principal: &Principal,
+        offset: usize,
+        limit: usize,
+    ) -> Result<arrpi_core::contracts::LinkedAccountPage, ApiError> {
+        self.operator_accounts(principal, offset, limit).await
+    }
+
     async fn identity(&self, binding: &Binding) -> Result<Actor, ApiError> {
         Backend::verified_actor(self, binding).await
     }

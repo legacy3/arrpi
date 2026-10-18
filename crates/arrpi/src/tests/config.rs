@@ -53,16 +53,14 @@ fn invalid_origins_permissions_and_bounds_are_rejected() {
 
 #[test]
 fn feed_metadata_is_public_bounded_and_cannot_embed_credentials() {
-    let valid = EXAMPLE
-        .replace("ArrPi release calendar", "Friends & Films")
-        .replace(
-            "https://github.com/legacy3/arrpi",
-            "https://example.test/calendar",
-        );
+    let valid = EXAMPLE.replace("ArrPi", "Friends & Films").replace(
+        "https://github.com/legacy3/arrpi",
+        "https://example.test/calendar",
+    );
     let config = Config::parse(&valid).expect("public feed metadata");
 
-    assert_eq!(config.feed.title, "Friends & Films");
-    assert_eq!(config.feed.link, "https://example.test/calendar");
+    assert_eq!(config.instance.title, "Friends & Films");
+    assert_eq!(config.instance.link, "https://example.test/calendar");
 
     for link in [
         "javascript:alert(1)",

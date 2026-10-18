@@ -25,6 +25,11 @@ export const test = base.extend<{
   },
 });
 
+export async function choose(page: Page, label: string, option: string) {
+  await page.getByRole("combobox", { exact: true, name: label }).click();
+  await page.getByRole("option", { exact: true, name: option }).click();
+}
+
 /** Each test owns its document and network interception, never shared mutable state. */
 export async function mockConfigEditor(
   page: Page,
@@ -68,4 +73,24 @@ export async function mockConfigEditor(
     },
     writes,
   };
+}
+
+export async function setGrants(page: Page, labels: string[]) {
+  const grants = page.getByRole("group", { exact: true, name: "Permissions" });
+  const names = await grants
+    .locator('label:has([role="checkbox"][aria-checked="true"])')
+    .allTextContents();
+
+  for (const name of names.map((name) => name.trim())) {
+    if (!labels.includes(name)) {
+      await grants
+        .getByRole("checkbox", { checked: true, exact: true, name })
+        .first()
+        .uncheck();
+    }
+  }
+
+  for (const name of labels) {
+    await grants.getByRole("checkbox", { exact: true, name }).check();
+  }
 }

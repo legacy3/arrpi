@@ -136,6 +136,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let remote =
                 arrpi_adapters::remote::RemoteApi::new(&connection.url, connection.no_cache)?;
 
+            remote.identify(&key).await?;
             arrpi_mcp::serve_stdio(arrpi_core::executor::Executor::new(remote), key.into()).await?;
         }
 

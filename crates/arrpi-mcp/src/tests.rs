@@ -30,6 +30,13 @@ struct Fake {
 
 #[async_trait]
 impl CommandExecutor for Fake {
+    fn instance(&self) -> arrpi_core::config::Instance {
+        arrpi_core::config::Instance {
+            title: "Fixture Cinema".to_owned(),
+            link: "https://cinema.example.test/".to_owned(),
+        }
+    }
+
     async fn list(&self, credential: &str) -> Result<Vec<ToolDefinition>, ApiError> {
         allowed(credential)?;
         Ok(vec![self.registry.definition(ToolId::ListMovies).clone()])
@@ -284,6 +291,20 @@ async fn stdio_binding_emits_protocol_frames_with_configured_schemas() {
     let initialized: Value = serde_json::from_str(&line).expect("stdout is only a JSON-RPC frame");
 
     assert_eq!(initialized["result"]["serverInfo"]["name"], "arrpi");
+    assert_eq!(
+        initialized["result"]["serverInfo"]["title"],
+        "ArrPi for Fixture Cinema"
+    );
+    assert_eq!(
+        initialized["result"]["serverInfo"]["websiteUrl"],
+        "https://cinema.example.test/"
+    );
+    assert!(
+        initialized["result"]["instructions"]
+            .as_str()
+            .expect("instructions")
+            .contains("search_releases")
+    );
     writer
         .write_all(b"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n")
         .await

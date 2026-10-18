@@ -15,7 +15,7 @@ pub struct Config {
     #[serde(default)]
     pub cache: CachePolicy,
     #[serde(default)]
-    pub feed: Feed,
+    pub instance: Instance,
     #[serde(default)]
     pub subscriptions: crate::subscriptions::Policy,
     pub sources: BTreeMap<String, Source>,
@@ -28,16 +28,20 @@ pub struct Config {
     pub oauth: Option<crate::oauth::Policy>,
 }
 
-/// Public metadata shared by calendar feed renderers.
+/// Public instance identity shared by the UI, MCP and calendar feeds.
 #[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(default, deny_unknown_fields)]
-pub struct Feed {
+pub struct Instance {
     pub title: String,
     pub link: String,
 }
 
-impl Feed {
-    fn validate(&self) -> Result<(), ConfigError> {
+impl Instance {
+    /// Validate public identity text and its credential-free website URL.
+    ///
+    /// # Errors
+    /// Rejects oversized text, control characters or unsafe website components.
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.title.trim().is_empty()
             || self.title.len() > 256
             || self.title.chars().any(|character| {
@@ -49,12 +53,12 @@ impl Feed {
                 character.is_control() || matches!(character, '\u{fffe}' | '\u{ffff}')
             })
         {
-            return Err(ConfigError::invalid("invalid feed metadata"));
+            return Err(ConfigError::invalid("invalid instance metadata"));
         }
 
         let link = Url::parse(&self.link).map_err(|error| {
             tracing::debug!(event = "invalid_feed_link", category = ?error);
-            ConfigError::invalid("invalid public feed link")
+            ConfigError::invalid("invalid public instance link")
         })?;
 
         if !matches!(link.scheme(), "http" | "https")
@@ -65,7 +69,7 @@ impl Feed {
             || link.fragment().is_some()
         {
             return Err(ConfigError::invalid(
-                "feed link needs HTTP(S), without credentials, query or fragment",
+                "instance link needs HTTP(S), without credentials, query or fragment",
             ));
         }
 
@@ -73,10 +77,10 @@ impl Feed {
     }
 }
 
-impl Default for Feed {
+impl Default for Instance {
     fn default() -> Self {
         Self {
-            title: "ArrPi release calendar".to_owned(),
+            title: "ArrPi".to_owned(),
             link: env!("CARGO_PKG_REPOSITORY").to_owned(),
         }
     }
@@ -218,7 +222,7 @@ impl Config {
         }
 
         self.cache.validate()?;
-        self.feed.validate()?;
+        self.instance.validate()?;
         self.mcp.validate()?;
 
         if let Some(oauth) = &self.oauth {

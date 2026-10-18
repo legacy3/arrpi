@@ -56,6 +56,8 @@ export interface components {
       season?: number | null;
       seasons?: number[] | null;
       source?: string | null;
+      /** @description Bounded upstream metadata captured from a verified mutation receipt. */
+      title?: string | null;
       /** Format: uint64 */
       tmdb_id?: number | null;
     };
@@ -262,6 +264,7 @@ export interface components {
       source?: string | null;
       /** @description Sources permitted for commands that accept an explicit source argument. */
       sources?: string[];
+      title: string;
     };
     /** @description Receipt for an applied revision; listener changes require a process restart. */
     ConfigUpdateResult: {
@@ -323,16 +326,16 @@ export interface components {
      * @enum {string}
      */
     EventKind: "episode" | "cinema" | "digital" | "physical";
-    /** @description Public metadata shared by calendar feed renderers. */
-    Feed: {
-      /** @default https://github.com/legacy3/arrpi */
-      link: string;
-      /** @default ArrPi release calendar */
-      title: string;
-    };
     /** @description Shared schema storage, independent of a protocol adapter's allocation type. */
     InputSchema: {
       [key: string]: unknown;
+    };
+    /** @description Public instance identity shared by the UI, MCP and calendar feeds. */
+    Instance: {
+      /** @default https://github.com/legacy3/arrpi */
+      link: string;
+      /** @default ArrPi */
+      title: string;
     };
     /** @description Null size means at least one item has no measurement; known bytes remain useful. */
     LibrarySummary: {
@@ -387,6 +390,22 @@ export interface components {
        * @default 15
        */
       queue_timeout_seconds: number;
+    };
+    /** @description Verified Plex-linked requester identity, without email or native credentials. */
+    LinkedAccount: {
+      /** Format: uint64 */
+      id: number;
+      name: string;
+      /** Format: uint64 */
+      plex_id: number;
+    };
+    /** @description Operator account chooser follows native pagination without a hidden cutoff. */
+    LinkedAccountPage: {
+      items: components["schemas"]["LinkedAccount"][];
+      /** Format: uint */
+      next_offset: number | null;
+      /** Format: uint */
+      offset: number;
     };
     /** @description Collection estimates never represent physical filesystem capacity. */
     MaintainerrSummary: {
@@ -549,10 +568,10 @@ export interface components {
       /**
        * @default {
        *       "link": "https://github.com/legacy3/arrpi",
-       *       "title": "ArrPi release calendar"
+       *       "title": "ArrPi"
        *     }
        */
-      feed: components["schemas"]["Feed"];
+      instance: components["schemas"]["Instance"];
       listen: string;
       /**
        * @default {
@@ -646,6 +665,7 @@ export interface components {
     Status: {
       cache: components["schemas"]["CachePolicy"];
       config_manage: boolean;
+      instance: components["schemas"]["Instance"];
       sources: components["schemas"]["SourceInfo"][];
       version: string;
     };
@@ -735,6 +755,8 @@ export interface components {
       available: boolean;
       description: string;
       name: string;
+      reason: string | null;
+      title: string;
     };
     /** @description Native PIN authorization is polled and refreshed by the upstream application. */
     TrackingAuthorization: {

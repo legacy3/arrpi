@@ -11,6 +11,19 @@ use arrpi_core::{
 };
 use rusqlite::params;
 
+/// Optional filters applied within one account's retained history.
+#[derive(Debug, Default)]
+pub struct AuditFilter<'a> {
+    /// Fuzzy title, action or source query (at most 128 characters).
+    pub query: &'a str,
+    /// Exact registered tool name.
+    pub tool: Option<&'a str>,
+    /// Exact stored outcome.
+    pub outcome: Option<&'a str>,
+    /// Inclusive UTC RFC3339 boundary with millisecond precision.
+    pub since: Option<&'a str>,
+}
+
 impl Store {
     /// Commit a bounded batch of whitelisted write-attempt coordinates atomically.
     ///
@@ -44,6 +57,101 @@ impl Store {
         transaction.execute("DELETE FROM write_audit WHERE client=?1 AND id NOT IN (SELECT id FROM write_audit WHERE client=?1 ORDER BY id DESC LIMIT ?2)",params![client,maximum]).map_err(|error| sql_error(&error))?;
         transaction.commit().map_err(|error| sql_error(&error))?;
         Ok(())
+    }
+
+    /// Filter all retained entries, streaming rows and retaining only one result page.
+    ///
+    /// # Errors
+    /// Rejects excessive queries/bounds and redacts storage failures.
+    pub fn search_audit(
+        &self,
+        client: &str,
+        offset: usize,
+        limit: usize,
+        filter: &AuditFilter<'_>,
+    ) -> Result<AuditPage, ApiError> {
+        use nucleo_matcher::{
+            Config, Matcher, Utf32Str,
+            pattern::{AtomKind, CaseMatching, Normalization, Pattern},
+        };
+        let AuditFilter {
+            query,
+            tool,
+            outcome,
+            since,
+        } = filter;
+
+        if query.chars().count() > 128 || limit == 0 || limit > 1000 {
+            return Err(ApiError::BAD_QUERY);
+        }
+
+        if query.is_empty() && tool.is_none() && outcome.is_none() && since.is_none() {
+            return self.write_audit(client, offset, limit);
+        }
+
+        let pattern = Pattern::new(
+            query,
+            CaseMatching::Ignore,
+            Normalization::Smart,
+            AtomKind::Fuzzy,
+        );
+        let mut matcher = Matcher::new(Config::DEFAULT);
+        let mut buffer = Vec::new();
+        let connection = self.connection.lock().map_err(|error| lock_error(&error))?;
+        let mut statement = connection.prepare("SELECT id,actor_id,tool,target,outcome,created_at FROM write_audit WHERE client=?1 AND (?2 IS NULL OR tool=?2) AND (?3 IS NULL OR outcome=?3) AND (?4 IS NULL OR created_at>=?4) ORDER BY id DESC").map_err(|error| sql_error(&error))?;
+        let rows = statement
+            .query_map(params![client, tool, outcome, since], audit_row)
+            .map_err(|error| sql_error(&error))?;
+        let mut items = Vec::with_capacity(limit);
+        let mut total = 0usize;
+
+        for row in rows {
+            let row = row.map_err(|error| sql_error(&error))?;
+            let action = match arrpi_core::registry::ToolId::parse(&row.tool) {
+                Some(id) => id.title(),
+                None => &row.tool,
+            };
+            let text = format!(
+                "{} {} {} {} {} {} {} {} {} {}",
+                row.target.title.as_deref().unwrap_or(""),
+                action,
+                row.tool,
+                row.outcome,
+                row.target.source.as_deref().unwrap_or(""),
+                row.target.tmdb_id.or(row.target.item_id).unwrap_or(0),
+                row.target.command_id.unwrap_or(0),
+                row.target.request_id.unwrap_or(0),
+                row.target.issue_id.unwrap_or(0),
+                row.target.season.unwrap_or(0)
+            );
+
+            if !query.is_empty()
+                && pattern
+                    .score(Utf32Str::new(&text, &mut buffer), &mut matcher)
+                    .is_none()
+            {
+                continue;
+            }
+
+            if total >= offset && items.len() < limit {
+                items.push(row);
+            }
+
+            total += 1;
+        }
+
+        let next = offset.saturating_add(items.len());
+
+        Ok(AuditPage {
+            client: client.to_owned(),
+            items,
+            total: u64::try_from(total).map_err(|error| {
+                tracing::debug!(event="audit_count",category=%error);
+                ApiError::INTERNAL
+            })?,
+            offset,
+            next_offset: (next < total).then_some(next),
+        })
     }
 
     /// Page one account's retained write attempts in newest-first order.
@@ -115,3 +223,6 @@ where
         ApiError::BAD_QUERY
     })
 }
+
+#[cfg(test)]
+mod tests;

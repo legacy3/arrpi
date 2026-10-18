@@ -1,17 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { parseAsString, useQueryState } from "nuqs";
 import { z } from "zod";
 
 import type { McpStatus } from "@/components/mcp";
 
 import { Notice } from "@/components/notice";
+import { SearchField } from "@/components/search-field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useFuzzySearch } from "@/hooks/use-fuzzy-search";
 import { numericFields } from "@/lib/generated/form-constraints";
 import { useApiQuery } from "@/lib/use-api-query";
 
 import { type EditorProps, useSettingsForm } from "./form";
 import { boundedNumber, httpUrl } from "./schemas";
 
+const TOOL_KEYS = ["title", "name", "description"] as const;
 const limitLabels: Record<keyof typeof numericFields.mcp, string> = {
   audit_max_entries: "Write history entries per account",
   batch_timeout_seconds: "Write batch budget (seconds)",
@@ -84,6 +89,15 @@ function McpEditor(
     Readonly<{ tools: McpStatus["tools"]; loading: boolean }>,
 ) {
   const { settings } = props.document;
+  const [search, setSearch] = useQueryState(
+    "tools",
+    parseAsString.withDefault(""),
+  );
+  const matches = useFuzzySearch({
+    items: props.tools,
+    keys: TOOL_KEYS,
+    query: search,
+  });
   const { form, mutation } = useSettingsForm(
     props,
     {
@@ -134,9 +148,11 @@ function McpEditor(
             />
           )}
         </form.AppField>
-        <section className="grid gap-4 border-t pt-5">
-          <h3 className="font-medium">Limits</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <details className="rounded-lg border p-4">
+          <summary className="cursor-pointer font-medium">
+            Advanced limits
+          </summary>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {limitNames.map((name) => (
               <form.AppField key={name} name={`limits.${name}`}>
                 {(field) => (
@@ -148,56 +164,62 @@ function McpEditor(
               </form.AppField>
             ))}
           </div>
-        </section>
-        <section className="grid gap-4 border-t pt-5">
-          <h3 className="font-medium">Tools</h3>
-          <p className="text-xs text-muted-foreground">
-            These switches apply to all accounts. Account grants and Seerr
-            permissions still apply.
-          </p>
-          {props.loading && (
-            <p role="status" className="text-muted-foreground">
-              Loading tools…
+        </details>
+        <details className="rounded-lg border p-4">
+          <summary className="cursor-pointer font-medium">
+            Tools ({props.tools.length})
+          </summary>
+          <div className="mt-4 grid gap-3">
+            <SearchField
+              label="Search tool switches"
+              value={search}
+              onChange={(value) => void setSearch(value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              These switches apply to all accounts. Account grants and Seerr
+              permissions still apply.
             </p>
-          )}
-          <form.AppField name="disabled_tools">
-            {(field) => (
-              <div className="divide-y">
-                {props.tools.map((tool) => (
-                  <label
-                    key={tool.name}
-                    className="flex items-start gap-3 py-3"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      aria-label={`Enable ${tool.name}`}
-                      checked={!field.state.value.includes(tool.name)}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(
-                          event.target.checked
-                            ? field.state.value.filter(
-                                (name) => name !== tool.name,
-                              )
-                            : [...field.state.value, tool.name],
-                        )
-                      }
-                    />
-                    <span className="min-w-0">
-                      <span className="break-all font-mono text-xs">
-                        {tool.name}
-                      </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {tool.description.split(". ")[0]}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
+            {props.loading && (
+              <p role="status" className="text-muted-foreground">
+                Loading tools…
+              </p>
             )}
-          </form.AppField>
-        </section>
+            <form.AppField name="disabled_tools">
+              {(field) => (
+                <div className="grid gap-x-5 sm:grid-cols-2">
+                  {matches.map((tool) => (
+                    <label
+                      key={tool.name}
+                      className="flex items-start gap-3 py-3"
+                    >
+                      <Checkbox
+                        className="mt-1"
+                        aria-label={`Enable ${tool.name}`}
+                        checked={!field.state.value.includes(tool.name)}
+                        onBlur={field.handleBlur}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(
+                            checked === true
+                              ? field.state.value.filter(
+                                  (name) => name !== tool.name,
+                                )
+                              : [...field.state.value, tool.name],
+                          )
+                        }
+                      />
+                      <span className="min-w-0">
+                        <span className="text-sm">{tool.title}</span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {tool.name}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </form.AppField>
+          </div>
+        </details>
       </form.Editor>
     </form.AppForm>
   );

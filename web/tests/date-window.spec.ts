@@ -39,9 +39,16 @@ for (const scenario of [
       );
       expect(calendarUrl.searchParams.get("end")).toBe(scenario.end);
       await page.getByLabel("Month", { exact: true }).fill("2030-05");
-      await page.getByRole("button", { exact: true, name: "Today" }).click();
+      await page
+        .getByRole("button", { exact: true, name: "This month" })
+        .click();
       await expect(page.getByLabel("Month", { exact: true })).toHaveValue(
         scenario.month,
+      );
+      await expect(page).toHaveURL(
+        (url) =>
+          !url.searchParams.has("month") ||
+          url.searchParams.get("month") === scenario.month,
       );
       await page.getByRole("link", { exact: true, name: "Explorer" }).click();
       await expect(

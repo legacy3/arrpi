@@ -27,6 +27,47 @@ impl Commands {
             .map(|(name, _)| name)
     }
 
+    pub(super) fn unavailable_reason(
+        &self,
+        caller: &Caller<'_>,
+        tool: ToolId,
+    ) -> Option<&'static str> {
+        if !self.ready() {
+            return Some("server_disabled");
+        }
+
+        if self
+            .policy
+            .disabled_tools
+            .iter()
+            .any(|name| name.as_ref() == tool.name())
+        {
+            return Some("tool_disabled");
+        }
+
+        if !tool.is_native() && caller.principal.binding.is_none() {
+            return Some("account_not_linked");
+        }
+
+        if !self.locally_permitted(caller.principal, tool) {
+            return Some("missing_grant");
+        }
+
+        if !actor_permitted(caller.actor, tool) {
+            return Some(if caller.actor.is_none() {
+                "account_unverified"
+            } else {
+                "account_permission"
+            });
+        }
+
+        if tool.is_write() && !tool.is_native() && !caller.compatible {
+            return Some("unverified_version");
+        }
+
+        None
+    }
+
     pub(super) fn allowed(&self, caller: &Caller<'_>, tool: ToolId) -> bool {
         !self
             .policy

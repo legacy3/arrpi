@@ -66,6 +66,11 @@ for (const error of [false, true]) {
     }
 
     await connect("/settings/server");
+
+    for (const title of ["Cache", "Requests", "HTTP listener"]) {
+      await page.getByText(title, { exact: true }).click();
+    }
+
     const first = page.getByLabel("Fresh data (seconds)", { exact: true });
 
     await expect(first).toBeVisible();

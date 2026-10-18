@@ -20,6 +20,7 @@ const status: Status = {
     timeout_seconds: 10,
   },
   config_manage: false,
+  instance: { link: "https://example.test", title: "Test stack" },
   sources: [
     {
       account: false,
@@ -151,6 +152,7 @@ test("connects, shows scoped overview, clears secrets on disconnect", async ({
 }, info) => {
   await fixtures(page);
   await connect(page);
+  await page.getByText("Diagnostics", { exact: true }).click();
   await expect(page.getByText("85%", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(() => ({
@@ -168,7 +170,7 @@ test("connects, shows scoped overview, clears secrets on disconnect", async ({
     fullPage: true,
     path: info.outputPath("overview.png"),
   });
-  await page.getByRole("button", { name: "Disconnect" }).click();
+  await page.getByRole("button", { name: /Disconnect/ }).click();
   await expect(page.getByLabel("Client key")).toHaveValue("");
   await expect(page.getByText("sonarr", { exact: true })).toHaveCount(0);
 });
@@ -183,7 +185,7 @@ test("calendar shows freshness, filters, escapes titles and refreshes upstream",
   await expect(
     page.getByText("Eine ziemlich gute Serie", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("stale · 123s", { exact: true })).toBeVisible();
+  await expect(page.getByText("stale, 123s", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => "pwned" in window)).toBe(false);
   await expect(page.locator(".event-list img")).toHaveCount(0);
   await page.getByLabel("Search events").fill("Film");
@@ -224,7 +226,7 @@ test("explorer fetches native JSON with optional cache bypass", async ({
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
   await chooseSource(page);
   await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
-  await page.getByRole("option", { exact: true, name: "series" }).click();
+  await page.getByRole("option", { exact: true, name: "TV shows" }).click();
   await page.getByLabel("Fresh upstream read").check();
   const fresh = page.waitForRequest(
     (request) =>
@@ -312,7 +314,7 @@ test("failed calendar refresh keeps explicitly labeled previous results", async 
     .getByRole("button", { name: "Refresh calendar from upstream" })
     .click();
   await expect(page.locator("main [role=alert]")).toHaveText(
-    "Request failed (502) · previous results",
+    "Request failed (502) (previous result)",
   );
   await expect(
     page.getByText("The Last Lantern", { exact: true }),
@@ -361,11 +363,15 @@ test("empty month input recovers with navigation and queue page is required", as
   await expect(page.getByLabel("Month", { exact: true })).toHaveValue(
     "2026-09",
   );
+  await page.clock.runFor(100);
   await page.getByRole("link", { exact: true, name: "Explorer" }).click();
+  await page.clock.runFor(100);
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
   await chooseSource(page);
   await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
-  await page.getByRole("option", { exact: true, name: "queue" }).click();
+  await page
+    .getByRole("option", { exact: true, name: "Download queue" })
+    .click();
   await expect(
     page.getByRole("combobox", { exact: true, name: "Operation" }),
   ).toBeFocused();
@@ -427,7 +433,7 @@ test("fresh preference changes no data until Fetch is pressed", async ({
   await expect(page).toHaveURL((url) => url.pathname === "/explorer");
   await chooseSource(page);
   await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
-  await page.getByRole("option", { exact: true, name: "series" }).click();
+  await page.getByRole("option", { exact: true, name: "TV shows" }).click();
   await page.getByRole("button", { exact: true, name: "Fetch" }).click();
   await expect(
     page.getByRole("textbox", { name: "Native JSON response" }),

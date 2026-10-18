@@ -4,7 +4,7 @@ import type { Components } from "@/lib/generated/contracts";
 export const summaryLabels: Record<SummaryKind, string> = {
   library: "Library",
   queue: "Queue",
-  status: "Monitoring",
+  status: "App activity",
 };
 
 export type Summary = Components["schemas"]["Summary"];
@@ -112,7 +112,7 @@ export function summaryWarnings(row: SummaryRow) {
   const warnings: string[] = [];
 
   if (!data.complete) {
-    warnings.push("Partial data");
+    warnings.push("Some results are missing.");
   }
 
   if (freshness.cache === "stale") {
@@ -120,15 +120,15 @@ export function summaryWarnings(row: SummaryRow) {
   }
 
   if ("byte_counts_complete" in data && !data.byte_counts_complete) {
-    warnings.push("Incomplete byte counts");
+    warnings.push("Some download sizes are unknown.");
   }
 
   if ("size_bytes" in data && data.size_bytes === null) {
-    warnings.push("Unmeasured library sizes");
+    warnings.push("File sizes have not been measured.");
   }
 
   if ("collections" in data && !data.collections.reclaimable_size_complete) {
-    warnings.push("Collection sizes incomplete or overlapping");
+    warnings.push("Reclaimable space is an estimate.");
   }
 
   return warnings;

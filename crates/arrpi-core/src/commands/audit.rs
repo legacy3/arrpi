@@ -116,6 +116,7 @@ fn number(value: &Value, key: &str) -> Option<u64> {
 
 fn target(value: &Value) -> AuditTarget {
     AuditTarget {
+        title: None,
         source: None,
         item_id: number(value, "item_id"),
         command_id: number(value, "command_id"),
@@ -158,6 +159,14 @@ fn target(value: &Value) -> AuditTarget {
 
 fn merge(mut coordinate: AuditTarget, receipt: &Value) -> AuditTarget {
     let other = target(receipt);
+
+    coordinate.title = receipt
+        .get("title")
+        .and_then(Value::as_str)
+        .filter(|title| {
+            !title.trim().is_empty() && title.len() <= 1024 && !title.chars().any(char::is_control)
+        })
+        .map(str::to_owned);
 
     // Receipts and configured source identities are safe; unknown input names are not retained.
     coordinate.source = receipt

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use arrpi_adapters::{build, cache::Pruner};
 use arrpi_core::{
     Commands,
-    config::{CachePolicy, Config, ConfigError, Feed},
+    config::{CachePolicy, Config, ConfigError, Instance},
     contracts::{Counters, SourceInfo, Status},
     executor::{CommandExecutor, Events, Executor},
     registry::{ToolDefinition, ToolId},
@@ -36,7 +36,7 @@ pub(crate) struct Gateway {
     pub(crate) clients: Vec<Access>,
     pub(crate) oauth: Option<arrpi_adapters::oauth::Verifier>,
     pub(crate) policy: CachePolicy,
-    pub(crate) feed: Feed,
+    pub(crate) instance: Instance,
     pub(crate) subscriptions: Option<Arc<crate::subscriptions::Store>>,
     pub(crate) commands: Commands,
     pub(crate) pruner: Pruner,
@@ -81,7 +81,7 @@ impl Gateway {
             clients,
             oauth: arrpi_adapters::oauth::Verifier::new(config)?,
             policy: config.cache,
-            feed: config.feed.clone(),
+            instance: config.instance.clone(),
             subscriptions,
             commands: Commands::new(
                 config,
@@ -119,6 +119,10 @@ struct LocalExecutor {
 
 #[async_trait]
 impl CommandExecutor for LocalExecutor {
+    fn instance(&self) -> Instance {
+        self.gateway.instance.clone()
+    }
+
     async fn list(&self, credential: &str) -> Result<Vec<ToolDefinition>, ApiError> {
         self.gateway
             .commands
@@ -427,6 +431,7 @@ async fn status(
         [(header::CACHE_CONTROL, "private, no-store")],
         Json(Status {
             config_manage: access.allows("config", "manage"),
+            instance: gateway.instance.clone(),
             version: env!("CARGO_PKG_VERSION"),
             cache: gateway.policy,
             sources,

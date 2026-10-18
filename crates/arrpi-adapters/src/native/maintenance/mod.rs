@@ -18,6 +18,8 @@ use serde_json::{Value, json};
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Item {
+    #[serde(default)]
+    title: Option<String>,
     id: u32,
     monitored: bool,
     quality_profile_id: u64,
@@ -122,7 +124,7 @@ impl Native {
 impl MaintenanceSource for Native {
     async fn refresh(&self, item_id: u32) -> Result<Value, ApiError> {
         self.maintenance_version().await?;
-        self.item(item_id).await?;
+        let item = self.item(item_id).await?;
         let body = if self.media_type == MediaType::Movie {
             json!({"name":"RefreshMovie","movieIds":[item_id]})
         } else {
@@ -131,6 +133,8 @@ impl MaintenanceSource for Native {
         let mut receipt = self.submit_command(body).await?;
 
         receipt["item_id"] = json!(item_id);
+        receipt["title"] = json!(item.title);
+        receipt["media_type"] = json!(self.media_type);
         Ok(receipt)
     }
 
@@ -145,7 +149,7 @@ impl MaintenanceSource for Native {
 
         self.maintenance_version().await?;
         let item = self.item(args.item_id).await?;
-        let mut noop = json!({"source":self.descriptor.name,"item_id":args.item_id,"accepted":false,"status":"nothing_to_search","reason":"no_eligible_episodes"});
+        let mut noop = json!({"source":self.descriptor.name,"item_id":args.item_id,"accepted":false,"status":"nothing_to_search","reason":"no_eligible_episodes","title":item.title,"media_type":self.media_type});
 
         if !item.monitored
             || (self.media_type == MediaType::Movie && args.missing_only && item.has_file)
@@ -174,6 +178,8 @@ impl MaintenanceSource for Native {
         let mut receipt = self.submit_command(body).await?;
 
         receipt["item_id"] = json!(args.item_id);
+        receipt["title"] = json!(item.title);
+        receipt["media_type"] = json!(self.media_type);
         receipt["missing_only"] = json!(args.missing_only);
         receipt["requested_episode_ids"] = args.episode_ids.into();
         receipt["season"] = args.season.into();

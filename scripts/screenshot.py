@@ -32,6 +32,7 @@ def demo_responses(key):
     mcp = read_json("/v1/mcp/status?client=" + quote(account["name"], safe=""), key)
     for tool in mcp["tools"]:
         tool["available"] = True
+        tool["reason"] = None
     account["name"] = "alex"
     settings["settings"]["clients"] = [account]
     settings["settings"]["mcp"]["public_url"] = "https://arrpi.example.com/v1/mcp"
@@ -145,7 +146,12 @@ def demo_responses(key):
                     "actor_id": 2,
                     "created_at": "2026-10-15T11:45:00Z",
                     "tool": "request_movie",
-                    "target": {"tmdb_id": 123456, "request_id": 7},
+                    "target": {
+                        "tmdb_id": 123456,
+                        "request_id": 7,
+                        "media_type": "movie",
+                        "title": "The Last Lantern",
+                    },
                     "outcome": "approved",
                 }
             ],
@@ -173,7 +179,7 @@ def capture(output, key, replies):
             page.goto(ORIGIN)
             page.get_by_label("Client key", exact=True).fill(key)
             page.get_by_role("button", name="Connect", exact=True).click()
-            for name, height in (("Overview", 720), ("Calendar", 900), ("MCP", 1200)):
+            for name, height in (("Overview", 720), ("Calendar", 900), ("MCP", 800)):
                 page.set_viewport_size({"width": 1360, "height": height})
                 if name != "Overview":
                     page.get_by_role("link", name=name, exact=True).click()
@@ -183,7 +189,9 @@ def capture(output, key, replies):
                 if name == "Calendar":
                     page.get_by_text("The Last Lantern", exact=True).wait_for()
                 if name == "MCP":
-                    page.get_by_text("Seerr connected", exact=True).wait_for()
+                    page.get_by_text(
+                        "Seerr connected. Requests available.", exact=True
+                    ).wait_for()
                 page.wait_for_load_state("networkidle")
                 page.evaluate("document.fonts.ready")
                 path = output / (name.lower() + ".png")

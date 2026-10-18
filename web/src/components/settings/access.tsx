@@ -1,15 +1,23 @@
-import { useState } from "react";
+import { KeyRound } from "lucide-react";
+import { parseAsString, useQueryState } from "nuqs";
 
 import type { SettingsDocument } from "@/lib/settings";
 
+import { CopyText } from "@/components/copy-text";
+import { Button } from "@/components/ui/button";
 import { hasConfigAccess } from "@/lib/settings";
 
+import { AccountPicker } from "./account-picker";
 import { EntryEditor, EntryList, RemoveEntry } from "./entry-list";
 import { type EditorProps, useSettingsForm } from "./form";
+import { Grants } from "./grants";
 import { clientSchema } from "./schemas";
 
 export function Access(props: EditorProps) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [entry, setEntry] = useQueryState("entry", parseAsString);
+  const selected = entry === "__new" ? "" : entry;
+  const setSelected = (value: string | null) =>
+    void setEntry(value === "" ? "__new" : value);
   const select = (value: string | null) => {
     props.onEdit();
     setSelected(value);
@@ -19,10 +27,7 @@ export function Access(props: EditorProps) {
 
   if (selected === "" || client) {
     return (
-      <EntryEditor
-        title={client ? `Edit ${client.name}` : "Add client"}
-        onBack={() => select(null)}
-      >
+      <EntryEditor title={client ? `Edit ${client.name}` : "Add client"}>
         <ClientEditor
           key={props.document.revision}
           {...props}
@@ -51,7 +56,7 @@ export function Access(props: EditorProps) {
       onAdd={() => select("")}
       onSelect={select}
       entries={clients.map((entry) => ({
-        detail: entry.permissions.join(", "),
+        detail: `${entry.permissions.length} grants${entry.seerr_user ? ", Plex-linked requester" : ""}${hasConfigAccess(entry.permissions) ? ", configuration access" : ""}`,
         id: entry.name,
         name: entry.name,
       }))}
@@ -151,28 +156,88 @@ function ClientEditor({
                 />
               )}
             </form.AppField>
-            <form.AppField name="seerr_id">
-              {(field) => (
-                <field.Text label="Seerr user ID" type="number" min={1} />
-              )}
-            </form.AppField>
-            <form.AppField name="plex_id">
-              {(field) => (
-                <field.Text label="Plex user ID" type="number" min={1} />
-              )}
-            </form.AppField>
           </div>
-          <form.AppField name="permissions">
-            {(field) => <field.Text label="Permissions" />}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const bytes = crypto.getRandomValues(new Uint8Array(48));
+
+                form.setFieldValue(
+                  "key",
+                  Array.from(bytes, (value) =>
+                    value.toString(16).padStart(2, "0"),
+                  ).join(""),
+                );
+              }}
+            >
+              <KeyRound className="size-4" />
+              Generate key
+            </Button>
+            <form.Subscribe selector={(state) => state.values.key}>
+              {(key) => <CopyText key={key} value={key} label="Copy new key" />}
+            </form.Subscribe>
+          </div>
+          <form.Subscribe
+            selector={(state) => ({
+              id: state.values.seerr_id,
+              plexId: state.values.plex_id,
+            })}
+          >
+            {(value) => (
+              <AccountPicker
+                configured={Boolean(settings.seerr)}
+                api={props.api}
+                id={value.id}
+                plexId={value.plexId}
+                onChange={(account) => {
+                  for (const name of ["seerr_id", "plex_id"] as const) {
+                    form.setFieldMeta(name, (meta) => ({
+                      ...meta,
+                      isTouched: true,
+                    }));
+                  }
+
+                  form.setFieldMeta("permissions", (meta) => ({
+                    ...meta,
+                    isTouched: true,
+                  }));
+                  form.setFieldValue(
+                    "seerr_id",
+                    account ? String(account.id) : "",
+                  );
+                  form.setFieldValue(
+                    "plex_id",
+                    account ? String(account.plex_id) : "",
+                  );
+                }}
+              />
+            )}
+          </form.Subscribe>
+          <form.AppField name="seerr_id">
+            {(field) => <field.Errors />}
           </form.AppField>
-          <p className="text-xs text-muted-foreground">
-            Separate permissions with commas. Use source:endpoint for native
-            reads, admin for full access, or catalog:view, requests:view and
-            requests:create for a request account. Set both user IDs to bind a
-            Plex-linked Seerr account. Library maintenance uses
-            source:library-refresh and source:library-search; these do not grant
-            access to configuration or arbitrary native writes.
-          </p>
+          <form.AppField name="plex_id">
+            {(field) => <field.Errors />}
+          </form.AppField>
+          <form.AppField name="permissions">
+            {(field) => (
+              <div className="grid gap-2">
+                <field.Control label="Permissions">
+                  <Grants
+                    sources={settings.sources}
+                    value={field.state.value}
+                    onChange={(value) => {
+                      field.handleChange(value);
+                      field.handleBlur();
+                    }}
+                  />
+                </field.Control>
+              </div>
+            )}
+          </form.AppField>
         </form.Editor>
       </form.AppForm>
       {client && (

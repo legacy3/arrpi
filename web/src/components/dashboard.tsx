@@ -134,6 +134,7 @@ function SessionView({
 
   function refreshOverview() {
     query.refresh(false);
+    void client.invalidateQueries({ queryKey: ["connection-health"] });
 
     for (const kind of summaryKinds(status.sources)) {
       const path = `/v1/summaries/${kind}`;
@@ -154,6 +155,7 @@ function SessionView({
       tab={tab}
       connected
       version={status.version}
+      instance={status.instance.title}
       configManage={status.config_manage}
       disconnect={disconnect}
       refresh={tab === "overview" ? refreshOverview : undefined}

@@ -1,20 +1,13 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { CircleAlert, Clock3, RefreshCw } from "lucide-react";
 
 import type { Api, SummaryKind } from "@/lib/api";
 
 import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { appInfo, errorText } from "@/lib/presentation";
 import {
   type Summary,
   summaryLabels,
@@ -51,75 +44,77 @@ export function OperationalSummary({
         <div className="px-5 pb-4">
           <Notice>
             {query.error.message}
-            {result ? " · previous results" : ""}
+            {result && <p className="mt-1">Showing the previous result.</p>}
           </Notice>
         </div>
       )}
       {!result && !query.error && (
-        <p className="px-5 pb-5 text-sm text-muted-foreground">Loading…</p>
+        <p className="px-5 pb-5 text-sm text-muted-foreground">Loading...</p>
       )}
       {result && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-5">Source</TableHead>
-              <TableHead>Activity</TableHead>
-              <TableHead className="pr-5 text-right">Observation</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {result.sources.map((row) => (
-              <TableRow key={row.source}>
-                <TableCell className="pl-5 align-top font-medium">
-                  {row.source}
-                </TableCell>
-                <TableCell className="min-w-52 whitespace-normal">
-                  {row.status === "unavailable" ? (
-                    <span className="text-destructive">
-                      Unavailable · {row.code}
-                    </span>
-                  ) : (
-                    <>
-                      <dl className="flex flex-wrap gap-x-6 gap-y-2">
-                        {summaryMetrics(row).map((metric) => (
-                          <div key={metric.label}>
-                            <dt className="text-xs text-muted-foreground">
-                              {metric.label}
-                            </dt>
-                            <dd className="text-sm tabular-nums">
-                              {metric.value}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                      {summaryWarnings(row).map((warning) => (
-                        <p
-                          key={warning}
-                          className="mt-2 text-xs text-amber-300"
-                        >
-                          {warning}
-                        </p>
-                      ))}
-                    </>
-                  )}
-                </TableCell>
-                <TableCell className="pr-5 align-top text-right text-xs text-muted-foreground">
-                  {row.status === "ok" ? (
-                    <span>
-                      {row.freshness.cache}
-                      <br />
+        <ul className="divide-y border-t">
+          {result.sources.map((row) => {
+            const AppIcon = appInfo(row.source).icon;
+
+            return (
+              <li key={row.source} className="space-y-3 px-5 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 font-medium">
+                    <AppIcon className="size-4 text-muted-foreground" />
+                    {row.source}
+                  </span>
+                  {row.status === "ok" && (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock3 className="size-3" />
                       {typeof row.freshness.age_seconds === "number"
                         ? `${row.freshness.age_seconds + elapsed}s old`
                         : "Age unknown"}
+                      {row.freshness.cache === "stale" && (
+                        <span className="ml-1 text-amber-300">Stale</span>
+                      )}
                     </span>
-                  ) : (
-                    "—"
                   )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                </div>
+                {row.status === "unavailable" ? (
+                  <Notice>
+                    <span className="font-medium">
+                      {row.source} is unavailable.
+                    </span>{" "}
+                    {errorText(row.code)}
+                    <details className="mt-1 text-xs">
+                      <summary>Technical details</summary>
+                      <code>{row.code}</code>
+                    </details>
+                  </Notice>
+                ) : (
+                  <>
+                    <dl className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-3">
+                      {summaryMetrics(row).map((metric) => (
+                        <div key={metric.label}>
+                          <dt className="text-xs text-muted-foreground">
+                            {metric.label}
+                          </dt>
+                          <dd className="text-sm tabular-nums">
+                            {metric.value}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {summaryWarnings(row).map((warning) => (
+                      <p
+                        key={warning}
+                        className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-200"
+                      >
+                        <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
+                        {warning}
+                      </p>
+                    ))}
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </Panel>
   );

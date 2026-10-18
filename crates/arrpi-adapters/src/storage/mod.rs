@@ -9,6 +9,7 @@ mod stats;
 
 use rusqlite::Connection;
 
+pub use audit::AuditFilter;
 pub use events::SqliteEvents;
 pub use feeds::{FeedAction, FeedLinks, SubscriptionStore};
 pub use settings::{Store, public, restore_secrets};

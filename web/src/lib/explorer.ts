@@ -1,6 +1,7 @@
 import type { Endpoint, Source, SummaryKind } from "@/lib/api";
 import type { Components } from "@/lib/generated/contracts";
 
+import { endpointLabels } from "@/lib/presentation";
 import { summaryKinds, summaryLabels } from "@/lib/summaries";
 
 export type Catalog = Components["schemas"]["CommandCatalog"];
@@ -20,7 +21,7 @@ export function operations(
     ...(source?.endpoints ?? []).map((endpoint) => ({
       endpoint,
       id: `native:${endpoint}`,
-      label: endpoint,
+      label: endpointLabels[endpoint] ?? endpoint,
       type: "native" as const,
     })),
     ...summaryKinds(source ? [source] : sources).map((summary) => ({
@@ -45,10 +46,20 @@ export function operations(
       .map((command) => ({
         command,
         id: `command:${command.name}`,
-        label: command.name,
+        label: command.title,
         type: "command" as const,
       })),
   ];
+}
+
+export function parseArguments(input: string): Record<string, unknown> {
+  const value: unknown = JSON.parse(input);
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Arguments must be a JSON object");
+  }
+
+  return value as Record<string, unknown>;
 }
 
 export function readPath(source: string | undefined, operation: Operation) {

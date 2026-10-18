@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 
-import { mockConfigEditor, test } from "./fixtures/ui";
+import { choose, mockConfigEditor, setGrants, test } from "./fixtures/ui";
 
 const issuer = "https://auth.example.test/application/o/arrpi/";
 
@@ -133,12 +133,14 @@ test("provider and identity saves preserve credentials and bind only requester c
   expect(writes.at(-1)?.settings.seerr).toEqual(original.seerr);
 
   await page.getByRole("button", { exact: true, name: "Add identity" }).click();
-  await expect(page.getByLabel("ArrPi client").locator("option")).toHaveText([
+  await page.getByLabel("ArrPi client").click();
+  await expect(page.getByRole("option")).toHaveText([
     "requester-1",
     "requester-2",
   ]);
+  await page.keyboard.press("Escape");
   await page.getByLabel("Provider subject").fill(binding.subject);
-  await page.getByLabel("ArrPi client").selectOption(binding.client);
+  await choose(page, "ArrPi client", binding.client);
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(
     page.getByRole("button", { exact: true, name: `Edit ${binding.subject}` }),
@@ -184,7 +186,7 @@ test("duplicate subjects, UTF-8 byte limits and conflicting writes retain the re
   expect(mock.writes).toHaveLength(0);
 
   await page.getByLabel("Provider subject").fill("second-exact-subject");
-  await page.getByLabel("ArrPi client").selectOption("requester-2");
+  await choose(page, "ArrPi client", "requester-2");
   mock.setConflict(true);
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(
@@ -193,7 +195,7 @@ test("duplicate subjects, UTF-8 byte limits and conflicting writes retain the re
   await expect(page.getByLabel("Provider subject")).toHaveValue(
     "second-exact-subject",
   );
-  await expect(page.getByLabel("ArrPi client")).toHaveValue("requester-2");
+  await expect(page.getByLabel("ArrPi client")).toContainText("requester-2");
   await expect(
     page.getByRole("button", { exact: true, name: "Save" }),
   ).toBeDisabled();
@@ -226,19 +228,15 @@ test("OAuth dependencies block client removal until the identity is removed", as
   await expect(
     page.getByRole("button", { exact: true, name: "Remove requester-1" }),
   ).toBeDisabled();
-  await page.getByLabel("Seerr user ID").fill("");
-  await page.getByLabel("Plex user ID").fill("");
-  await page.getByLabel("Plex user ID").blur();
+  await choose(page, "Requester account", "No requester account");
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "Keep both user IDs",
   );
   await expect(
     page.getByRole("button", { exact: true, name: "Save" }),
   ).toBeDisabled();
-  await page.getByLabel("Seerr user ID").fill("1");
-  await page.getByLabel("Plex user ID").fill("101");
-  await page.getByLabel("Permissions").fill("admin");
-  await page.getByLabel("Permissions").blur();
+  await choose(page, "Requester account", "Fixture owner");
+  await setGrants(page, ["Full administrator access"]);
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "before granting configuration access",
   );
@@ -247,6 +245,11 @@ test("OAuth dependencies block client removal until the identity is removed", as
   ).toBeDisabled();
   expect(writes).toHaveLength(0);
   await page.getByRole("link", { exact: true, name: "OAuth" }).click();
+
+  await page
+    .getByRole("button", { exact: true, name: "Discard changes" })
+    .click();
+
   await page
     .getByRole("button", { exact: true, name: `Edit ${binding.subject}` })
     .click();
@@ -293,7 +296,7 @@ test("editing an identity returns focus and feedback to its list", async ({
     "readonly",
     "",
   );
-  await page.getByLabel("ArrPi client").selectOption("requester-2");
+  await choose(page, "ArrPi client", "requester-2");
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(
     page.getByRole("heading", { exact: true, name: "OAuth identities" }),
@@ -370,7 +373,7 @@ test("an externally removed identity stays closed if a later revision restores i
   await page
     .getByRole("button", { exact: true, name: `Edit ${binding.subject}` })
     .click();
-  await page.getByLabel("ArrPi client").selectOption("requester-2");
+  await choose(page, "ArrPi client", "requester-2");
   document.settings.oauth.bindings = [];
   document.revision += 1;
   mock.setConflict(true);

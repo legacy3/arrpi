@@ -60,6 +60,23 @@ async fn reply(
 
     state.calls.fetch_add(1, Ordering::Relaxed);
     assert_eq!(request.headers()["X-API-Key"], "fake-seerr-key");
+
+    if request.uri().path() == "/api/v1/user" {
+        assert!(request.headers().get("X-API-User").is_none());
+        let empty = request
+            .uri()
+            .query()
+            .is_some_and(|query| query.contains("skip=3"));
+
+        return axum::Json(if empty { json!({"pageInfo":{"results":99},"results":[]}) } else {
+            json!({"pageInfo":{"results":99},"results":[
+                {"id":1,"plexId":101,"displayName":"Fixture friend","email":"private@example.test","apiKey":"never-project"},
+                {"id":2,"plexId":null,"username":"local-only"},
+                {"id":3,"plexId":103,"username":"Second friend"}
+            ]})
+        }).into_response();
+    }
+
     assert_eq!(request.headers()["X-API-User"], "1");
     let value = match request.uri().path() {
         "/api/v1/auth/me" => {
@@ -402,4 +419,55 @@ async fn invalid_cancel_identifiers_fail_before_native_identity_io() {
 
     assert_eq!(error, ApiError::BAD_QUERY);
     assert_eq!(fixture.state.calls.load(Ordering::Relaxed), 0);
+}
+
+#[tokio::test]
+async fn operator_account_lookup_projects_binding_pairs_and_progresses_over_local_rows() {
+    use arrpi_core::source::Principal;
+    let fixture = fixture().await;
+    let principal = Principal {
+        name: "operator".to_owned(),
+        tracking: None,
+        permissions: [Box::from("config:manage")].into(),
+        binding: None,
+    };
+    let page = fixture
+        .backend
+        .operator_accounts(&principal, 0, 3)
+        .await
+        .expect("accounts");
+
+    assert_eq!(page.items.len(), 2);
+    assert_eq!(page.items[0].plex_id, 101);
+    assert_eq!(page.items[1].id, 3);
+    assert_eq!(page.next_offset, Some(3));
+    let encoded = serde_json::to_string(&page).expect("projection");
+
+    assert!(!encoded.contains("private@example.test") && !encoded.contains("never-project"));
+    let end = fixture
+        .backend
+        .operator_accounts(&principal, 3, 3)
+        .await
+        .expect("empty page");
+
+    assert_eq!(end.next_offset, None);
+    let denied = Principal {
+        permissions: [Box::from("catalog:view")].into(),
+        ..principal
+    };
+
+    assert_eq!(
+        fixture
+            .backend
+            .operator_accounts(&denied, 0, 3)
+            .await
+            .expect_err("operator only")
+            .code(),
+        "permission_denied"
+    );
+    fixture
+        .backend
+        .operator_accounts(&denied, 0, 101)
+        .await
+        .expect_err("unauthorized lookup");
 }

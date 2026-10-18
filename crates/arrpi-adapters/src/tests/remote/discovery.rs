@@ -85,3 +85,27 @@ async fn duplicate_advertisements_cannot_choose_ambiguous_tool_metadata() {
             .is_none()
     );
 }
+
+#[tokio::test]
+async fn remote_identity_is_public_validated_and_additive() {
+    for metadata in [
+        json!({"instance":{"title":"Fixture Cinema","link":"https://cinema.example.test/","future":"ignored"}}),
+        json!({"sources":[]}),
+    ] {
+        let (server, _calls) = fixture(response(200, &metadata.to_string(), None)).await;
+        let remote = RemoteApi::new(&server.url, false).expect("remote");
+
+        remote.identify(CLIENT_KEY).await.expect("public metadata");
+        assert!(!remote.instance().title.is_empty());
+    }
+
+    let invalid =
+        json!({"instance":{"title":"bad\ncontrol","link":"https://cinema.example.test/"}});
+    let (server, _calls) = fixture(response(200, &invalid.to_string(), None)).await;
+    let remote = RemoteApi::new(&server.url, false).expect("remote");
+
+    remote
+        .identify(CLIENT_KEY)
+        .await
+        .expect_err("invalid metadata");
+}

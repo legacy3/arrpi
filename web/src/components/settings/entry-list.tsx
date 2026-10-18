@@ -1,32 +1,45 @@
 import { useBoolean, useMount, useUpdateEffect } from "ahooks";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import { type ReactNode, useRef } from "react";
 
 import type { SettingsDocument } from "@/lib/settings";
 
 import { ConfigConflict } from "@/components/config-conflict";
 import { Notice } from "@/components/notice";
+import { SearchField } from "@/components/search-field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useFuzzySearch } from "@/hooks/use-fuzzy-search";
 import { useConfigMutation } from "@/lib/use-config-mutation";
 
 import type { EditorProps } from "./form";
+const ENTRY_KEYS = ["name", "detail", "id"] as const;
 
 export function EntryEditor({
   children,
-  onBack,
   title,
-}: Readonly<{ title: string; onBack: () => void; children: ReactNode }>) {
+}: Readonly<{ title: string; children: ReactNode }>) {
+  const path = usePathname();
+  const params = new URLSearchParams(useSearchParams().toString());
+
+  params.delete("entry");
+  const href = params.size > 0 ? `${path}?${params}` : path;
+
   return (
     <div className="grid max-w-3xl gap-4">
       <Button
         type="button"
         variant="ghost"
         className="justify-self-start"
-        onClick={onBack}
+        asChild
       >
-        <ArrowLeft className="size-4" />
-        Back
+        <Link href={href} prefetch={false}>
+          <ArrowLeft className="size-4" />
+          Back
+        </Link>
       </Button>
       <EntryHeading>{title}</EntryHeading>
       {children}
@@ -59,6 +72,12 @@ export function EntryList({
   }[];
   onSelect: (id: string) => void;
 }>) {
+  const [query, setQuery] = useQueryState(
+    "search",
+    parseAsString.withDefault(""),
+  );
+  const matches = useFuzzySearch({ items: entries, keys: ENTRY_KEYS, query });
+
   return (
     <Card className="gap-0 py-0">
       <div className="flex items-center justify-between gap-3 p-5">
@@ -79,8 +98,15 @@ export function EntryList({
           {message}
         </p>
       )}
+      <div className="px-5 pb-4">
+        <SearchField
+          label={`Search ${title.toLowerCase()}`}
+          value={query}
+          onChange={(value) => void setQuery(value)}
+        />
+      </div>
       <ul className="divide-y border-t">
-        {entries.map((entry) => (
+        {matches.map((entry) => (
           <li
             key={entry.id}
             className="flex items-center justify-between gap-4 px-5 py-3"
@@ -104,6 +130,11 @@ export function EntryList({
           </li>
         ))}
       </ul>
+      {matches.length === 0 && (
+        <p className="px-5 py-5 text-sm text-muted-foreground">
+          No matching entries.
+        </p>
+      )}
     </Card>
   );
 }

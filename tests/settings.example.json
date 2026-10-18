@@ -1,7 +1,7 @@
 {
   "listen": "127.0.0.1:8780",
-  "feed": {
-    "title": "ArrPi release calendar",
+  "instance": {
+    "title": "ArrPi",
     "link": "https://github.com/legacy3/arrpi"
   },
   "subscriptions": {

@@ -11,7 +11,9 @@ export default async function Page({
 }: Readonly<{ params: Promise<{ section: string }> }>) {
   const { section } = await params;
 
-  if (!["access", "feeds", "mcp", "oauth", "server"].includes(section)) {
+  if (
+    !["access", "feeds", "general", "mcp", "oauth", "server"].includes(section)
+  ) {
     notFound();
   }
 

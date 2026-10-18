@@ -1,4 +1,8 @@
+import { format, isValid, parseISO } from "date-fns";
+
 import type { Components as components } from "@/lib/generated/contracts";
+
+import { responseError } from "@/lib/presentation";
 
 export type CacheState = components["schemas"]["CacheState"];
 export type Calendar = components["schemas"]["Calendar"];
@@ -137,7 +141,7 @@ export class HttpError extends Error {
   status: number;
 
   constructor(message: string, status: number, data: unknown) {
-    super(message);
+    super(responseError(message, data));
     this.status = status;
     this.data = data;
   }
@@ -175,34 +179,15 @@ export function dateRange(month: string) {
 }
 
 export function displayDate(event: CalendarEvent) {
-  if (event.kind === "episode") {
-    const timestamp = new Date(event.date);
+  const date = parseISO(
+    event.kind === "episode" ? event.date : event.date.slice(0, 10),
+  );
 
-    if (!event.date.includes("T") || !Number.isFinite(timestamp.getTime())) {
-      return "Unknown date";
-    }
-
-    return new Intl.DateTimeFormat(undefined, {
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      month: "short",
-      timeZone: "UTC",
-    }).format(timestamp);
-  }
-
-  // A movie release date is a calendar day, not a UTC timestamp.
-  const day = new Date(`${event.date.slice(0, 10)}T12:00:00Z`);
-
-  if (!Number.isFinite(day.getTime())) {
+  if (!isValid(date)) {
     return "Unknown date";
   }
 
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(day);
+  return format(date, event.kind === "episode" ? "d MMM, HH:mm OOOO" : "d MMM");
 }
 
 export function isMonth(month: string) {

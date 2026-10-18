@@ -21,7 +21,7 @@ export const metadata: Metadata = {
       { sizes: "64x64", type: "image/png", url: "/favicon-64.png" },
     ],
   },
-  title: { default: "ArrPi", template: "%s · ArrPi" },
+  title: { default: "ArrPi", template: "%s | ArrPi" },
 };
 
 export default async function RootLayout({

@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { parseAsString, useQueryState } from "nuqs";
 
 import type { SettingsDocument } from "@/lib/settings";
+
+import { appInfo } from "@/lib/presentation";
 
 import { ConnectionStatus } from "./connection-status";
 import { EntryEditor, EntryList, RemoveEntry } from "./entry-list";
@@ -8,7 +10,10 @@ import { type EditorProps, useSettingsForm } from "./form";
 import { seerrSchema, sourceSchema } from "./schemas";
 
 export function Connections(props: EditorProps) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [entry, setEntry] = useQueryState("entry", parseAsString);
+  const selected = entry === "__new" ? "" : entry;
+  const setSelected = (value: string | null) =>
+    void setEntry(value === "" ? "__new" : value);
   const select = (value: string | null) => {
     props.onEdit();
     setSelected(value);
@@ -18,10 +23,7 @@ export function Connections(props: EditorProps) {
 
   if (selected === "" || source) {
     return (
-      <EntryEditor
-        title={source ? `Edit ${selected}` : "Add source"}
-        onBack={() => select(null)}
-      >
+      <EntryEditor title={source ? `Edit ${selected}` : "Add source"}>
         <SourceEditor
           key={props.document.revision}
           {...props}
@@ -41,7 +43,7 @@ export function Connections(props: EditorProps) {
 
   if (selected === "seerr") {
     return (
-      <EntryEditor title="Seerr connection" onBack={() => select(null)}>
+      <EntryEditor title="Seerr connection">
         <SeerrEditor key={props.document.revision} {...props} />
       </EntryEditor>
     );
@@ -56,7 +58,7 @@ export function Connections(props: EditorProps) {
       onSelect={select}
       entries={[
         ...Object.entries(settings.sources).map(([id, entry]) => ({
-          detail: `${entry.kind} · ${entry.url}`,
+          detail: `${appInfo(entry.kind).label}: ${entry.url}`,
           id,
           name: id,
           status: (
@@ -183,9 +185,10 @@ function SourceEditor({
         [value.name]: {
           api_key: value.api_key || (value.kind === "maintainerr" ? "" : null),
           kind: value.kind,
-          seerr_server_id: value.seerr_server_id
-            ? Number(value.seerr_server_id)
-            : null,
+          seerr_server_id:
+            ["radarr", "sonarr"].includes(value.kind) && value.seerr_server_id
+              ? Number(value.seerr_server_id)
+              : null,
           url: value.url,
         },
       },
@@ -234,16 +237,22 @@ function SourceEditor({
                 </form.AppField>
               )}
             </form.Subscribe>
-            <form.AppField name="seerr_server_id">
-              {(field) => (
-                <field.Text
-                  label="Seerr server ID (profile selection)"
-                  type="number"
-                  min={0}
-                  max={4_294_967_295}
-                />
-              )}
-            </form.AppField>
+            <form.Subscribe selector={(state) => state.values.kind}>
+              {(kind) =>
+                ["radarr", "sonarr"].includes(kind) ? (
+                  <form.AppField name="seerr_server_id">
+                    {(field) => (
+                      <field.Text
+                        label="Seerr server ID (profile selection)"
+                        type="number"
+                        min={0}
+                        max={4_294_967_295}
+                      />
+                    )}
+                  </form.AppField>
+                ) : null
+              }
+            </form.Subscribe>
           </div>
         </form.Editor>
       </form.AppForm>

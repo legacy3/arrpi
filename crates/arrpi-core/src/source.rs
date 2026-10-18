@@ -335,6 +335,16 @@ pub trait CatalogSource: Debug + Send + Sync {
 /// Bound accounts supply fresh native rights, quotas and service profile metadata.
 #[async_trait]
 pub trait AccountSource: Debug + Send + Sync {
+    /// Operator-only lookup; this never chooses an actor for a media mutation.
+    async fn linked_accounts(
+        &self,
+        _principal: &Principal,
+        _offset: usize,
+        _limit: usize,
+    ) -> Result<crate::contracts::LinkedAccountPage, ApiError> {
+        Err(ApiError::FORBIDDEN)
+    }
+
     async fn identity(&self, binding: &Binding) -> Result<Actor, ApiError>;
 
     async fn compatible(&self, binding: &Binding) -> Result<bool, ApiError>;

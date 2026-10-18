@@ -5,10 +5,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  RotateCw,
+  RefreshCw,
   Search,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useMemo } from "react";
 
 import { CalendarEvents } from "@/components/calendar-events";
 import { Choice } from "@/components/choice";
@@ -18,6 +19,7 @@ import { Panel } from "@/components/panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useFuzzySearch } from "@/hooks/use-fuzzy-search";
 import {
   type Api,
   type Calendar as CalendarData,
@@ -31,14 +33,25 @@ import { useApiQuery } from "@/lib/use-api-query";
 import { useElapsed } from "@/lib/use-elapsed";
 import { cn } from "@/lib/utils";
 
+const CALENDAR_KEYS = ["title", "series", "source"] as const;
+
 export function Calendar({
   api,
   status,
 }: Readonly<{ api: Api; status: Status }>) {
-  const [month, setMonth] = useState(currentMonth);
-  const [source, setSource] = useState("");
-  const [search, setSearch] = useState("");
-  const [shown, setShown] = useState(100);
+  const [filters, setFilters] = useQueryStates({
+    month: parseAsString.withDefault(currentMonth()),
+    search: parseAsString.withDefault(""),
+    shown: parseAsInteger.withDefault(100),
+    source: parseAsString.withDefault(""),
+  });
+  const { month, search, source } = filters;
+  const shown = Math.max(100, filters.shown);
+  const setMonth = (month: string) =>
+    void setFilters({ month }, { history: "push" });
+  const setSource = (source: string) => void setFilters({ shown: 100, source });
+  const setSearch = (search: string) => void setFilters({ search, shown: 100 });
+  const setShown = (shown: number) => void setFilters({ shown });
   const selected = isMonth(month);
   const dates = dateRange(selected ? month : "2000-01");
   const query = useApiQuery<CalendarData>(
@@ -48,13 +61,14 @@ export function Calendar({
   );
   const data = query.data?.data ?? failedCalendar(query.error);
   const elapsed = useElapsed(query.data?.receivedAt);
-  const events = (data?.events ?? []).filter(
-    (event) =>
-      (!source || event.source === source) &&
-      `${event.series ?? ""} ${event.title}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+  const all = useMemo(() => data?.events ?? [], [data?.events]);
+  const matches = useFuzzySearch({
+    items: all,
+    keys: CALENDAR_KEYS,
+    limit: 10_000,
+    query: search,
+  });
+  const events = matches.filter((event) => !source || event.source === source);
   const error = selected ? query.error?.message : "Choose a month";
   const previous = query.isError && Boolean(query.data?.data.events.length);
 
@@ -98,7 +112,7 @@ export function Calendar({
             className="ml-1 text-muted-foreground"
             onClick={() => changeMonth(currentMonth())}
           >
-            Today
+            This month
           </Button>
         </div>
         <Choice
@@ -130,7 +144,7 @@ export function Calendar({
           disabled={query.isFetching || !selected}
           onClick={() => query.refresh()}
         >
-          <RotateCw
+          <RefreshCw
             className={cn("size-4", query.isFetching && "animate-spin")}
           />
           <span className="hidden sm:inline">Refresh</span>
@@ -170,7 +184,7 @@ export function Calendar({
         <div className="px-5 pb-4">
           <Notice>
             {error}
-            {previous ? " · previous results" : ""}
+            {previous ? " (previous result)" : ""}
           </Notice>
         </div>
       )}
@@ -254,5 +268,5 @@ function sourceState(source: CalendarData["sources"][number], elapsed: number) {
       ? "age unknown"
       : `${source.age_seconds + elapsed}s`;
 
-  return `${source.cache ?? "unknown"} · ${age}`;
+  return `${source.cache ?? "unknown"}, ${age}`;
 }

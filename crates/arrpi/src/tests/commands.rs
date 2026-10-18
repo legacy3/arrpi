@@ -413,6 +413,13 @@ async fn streamable_mcp_negotiates_filters_tools_and_enforces_every_call() {
     let init: Value = serde_json::from_str(&body).expect("JSON init");
 
     assert_eq!(init["result"]["serverInfo"]["name"], "arrpi");
+    assert_eq!(init["result"]["serverInfo"]["title"], "ArrPi for ArrPi");
+    assert!(
+        init["result"]["instructions"]
+            .as_str()
+            .expect("instructions")
+            .contains("refresh_media")
+    );
     let tools = rpc(&api, CLIENT_KEY, "tools/list", json!({}))
         .await
         .text()

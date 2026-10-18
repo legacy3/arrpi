@@ -218,6 +218,13 @@
               "null"
             ]
           },
+          "title": {
+            "description": "Bounded upstream metadata captured from a verified mutation receipt.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "tmdb_id": {
             "format": "uint64",
             "minimum": 0,
@@ -779,10 +786,14 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "title": {
+            "type": "string"
           }
         },
         "required": [
           "name",
+          "title",
           "description",
           "inputSchema",
           "annotations"
@@ -954,16 +965,21 @@
         ],
         "type": "string"
       },
-      "Feed": {
+      "InputSchema": {
+        "additionalProperties": true,
+        "description": "Shared schema storage, independent of a protocol adapter's allocation type.",
+        "type": "object"
+      },
+      "Instance": {
         "additionalProperties": false,
-        "description": "Public metadata shared by calendar feed renderers.",
+        "description": "Public instance identity shared by the UI, MCP and calendar feeds.",
         "properties": {
           "link": {
             "default": "https://github.com/legacy3/arrpi",
             "type": "string"
           },
           "title": {
-            "default": "ArrPi release calendar",
+            "default": "ArrPi",
             "type": "string"
           }
         },
@@ -971,11 +987,6 @@
           "title",
           "link"
         ],
-        "type": "object"
-      },
-      "InputSchema": {
-        "additionalProperties": true,
-        "description": "Shared schema storage, independent of a protocol adapter's allocation type.",
         "type": "object"
       },
       "LibrarySummary": {
@@ -1091,6 +1102,60 @@
           "max_search_episodes",
           "max_concurrent_writes",
           "queue_timeout_seconds"
+        ],
+        "type": "object"
+      },
+      "LinkedAccount": {
+        "description": "Verified Plex-linked requester identity, without email or native credentials.",
+        "properties": {
+          "id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plex_id": {
+            "format": "uint64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "plex_id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "LinkedAccountPage": {
+        "description": "Operator account chooser follows native pagination without a hidden cutoff.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LinkedAccount"
+            },
+            "type": "array"
+          },
+          "next_offset": {
+            "format": "uint",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "offset": {
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "offset",
+          "next_offset"
         ],
         "type": "object"
       },
@@ -1547,11 +1612,11 @@
             },
             "type": "array"
           },
-          "feed": {
-            "$ref": "#/components/schemas/Feed",
+          "instance": {
+            "$ref": "#/components/schemas/Instance",
             "default": {
               "link": "https://github.com/legacy3/arrpi",
-              "title": "ArrPi release calendar"
+              "title": "ArrPi"
             }
           },
           "listen": {
@@ -1616,7 +1681,7 @@
         "required": [
           "listen",
           "cache",
-          "feed",
+          "instance",
           "subscriptions",
           "sources",
           "clients",
@@ -1785,6 +1850,9 @@
           "config_manage": {
             "type": "boolean"
           },
+          "instance": {
+            "$ref": "#/components/schemas/Instance"
+          },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/SourceInfo"
@@ -1797,6 +1865,7 @@
         },
         "required": [
           "config_manage",
+          "instance",
           "version",
           "cache",
           "sources"
@@ -2042,10 +2111,21 @@
           },
           "name": {
             "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
           }
         },
         "required": [
           "name",
+          "title",
+          "reason",
           "description",
           "available"
         ],
@@ -2155,7 +2235,7 @@
   },
   "info": {
     "title": "ArrPi public API",
-    "version": "0.1.6"
+    "version": "0.1.7"
   },
   "openapi": "3.1.0",
   "paths": {}

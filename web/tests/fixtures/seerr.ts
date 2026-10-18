@@ -360,6 +360,28 @@ async function reply(request: IncomingMessage, response: ServerResponse) {
     return;
   }
 
+  if (
+    request.method === "GET" &&
+    url.pathname === "/api/v1/user" &&
+    request.headers["x-api-key"] === "fake-seerr-key"
+  ) {
+    const users = [
+      { displayName: "Fixture owner", id: 1, plexId: 101 },
+      { displayName: "Fixture friend", id: 2, plexId: 102 },
+    ];
+    const skip = Number(url.searchParams.get("skip") ?? 0);
+    const take = Number(url.searchParams.get("take") ?? 100);
+
+    response.end(
+      JSON.stringify({
+        pageInfo: { results: users.length },
+        results: users.slice(skip, skip + take),
+      }),
+    );
+
+    return;
+  }
+
   const actor = Number(request.headers["x-api-user"]);
 
   if (

@@ -138,7 +138,7 @@ impl Commands {
         result
     }
 
-    /// Inspect capabilities independently from master/tool enable switches.
+    /// Inspect effective access, including global switches and account prerequisites.
     ///
     /// # Errors
     /// Serialization failure is internal; native account failure stays in the status.
@@ -159,12 +159,14 @@ impl Commands {
             .iter()
             .map(|tool| {
                 let definition = self.definition(*tool);
+                let reason = self.unavailable_reason(&caller, *tool);
 
                 ToolVisibility {
                     name: tool.name().to_owned(),
+                    title: tool.title().to_owned(),
                     description: definition.description.to_string(),
-                    available: (!tool.is_write() || tool.is_native() || caller.compatible)
-                        && self.permitted(&caller, *tool),
+                    reason: reason.map(str::to_owned),
+                    available: reason.is_none(),
                 }
             })
             .collect();

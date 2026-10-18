@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 
 import type { Status } from "../src/lib/api";
 
-import { mockConfigEditor, test } from "./fixtures/ui";
+import { choose, mockConfigEditor, setGrants, test } from "./fixtures/ui";
 
 test("section saves preserve masked credentials, mappings and unrelated settings", async ({
   configDocument: document,
@@ -17,8 +17,8 @@ test("section saves preserve masked credentials, mappings and unrelated settings
     page.getByRole("heading", { exact: true, name: "Connections" }),
   ).toBeVisible();
   await expect(page.getByLabel("API key", { exact: true })).toHaveCount(0);
-  await page.getByRole("link", { exact: true, name: "Feeds" }).click();
-  await expect(page).toHaveURL(/\/settings\/feeds$/);
+  await page.getByRole("link", { exact: true, name: "General" }).click();
+  await expect(page).toHaveURL(/\/settings\/general$/);
   await page.getByLabel("Title", { exact: true }).fill("Friends calendar");
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(page.getByRole("status")).toHaveText("Saved and applied.");
@@ -32,7 +32,7 @@ test("section saves preserve masked credentials, mappings and unrelated settings
   expect(saved?.seerr).toEqual(original.seerr);
   expect(saved?.cache).toEqual(original.cache);
   expect(saved?.subscriptions).toEqual(original.subscriptions);
-  expect(saved?.feed.title).toBe("Friends calendar");
+  expect(saved?.instance.title).toBe("Friends calendar");
   expect(saved?.sources.sonarr?.seerr_server_id).toBe(0);
   expect(saved?.clients.every((client) => client.key === null)).toBe(true);
 });
@@ -100,10 +100,10 @@ test("conflicts retain the draft until explicit reload and save the reviewed rev
 }) => {
   const mock = await mockConfigEditor(page, configDocument);
 
-  await connect("/settings/feeds");
+  await connect("/settings/general");
   await page.getByLabel("Title", { exact: true }).fill("Unsaved draft");
   configDocument.revision += 1;
-  configDocument.settings.feed.title = "Another editor";
+  configDocument.settings.instance.title = "Another editor";
   mock.setConflict(true);
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(
@@ -143,7 +143,7 @@ test("duplicate client names cannot reuse a stored account credential", async ({
   await page
     .getByLabel("Client key", { exact: true })
     .fill("fake-new-account-key-00000000000000000");
-  await page.getByLabel("Permissions", { exact: true }).fill("catalog:view");
+  await setGrants(page, ["Browse request catalog"]);
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "A client with this name already exists",
   );
@@ -160,6 +160,8 @@ test("restart guidance survives the saved revision refresh", async ({
 }) => {
   await mockConfigEditor(page, configDocument, true);
   await connect("/settings/server");
+  await page.getByText("HTTP listener", { exact: true }).click();
+  await page.getByText("Cache", { exact: true }).click();
   await page.getByLabel("Maximum connections", { exact: true }).fill("65");
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(page.getByRole("status")).toHaveText(
@@ -349,7 +351,7 @@ test("generated numeric bounds and the combined feed window block invalid saves"
   await connect("/settings/feeds");
   await page.getByLabel("Past days", { exact: true }).fill("60");
   await page.getByLabel("Future days", { exact: true }).fill("60");
-  await page.getByLabel("Title", { exact: true }).focus();
+  await page.getByLabel("Future days", { exact: true }).blur();
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "Past and future days must total at most 92",
   );
@@ -357,6 +359,10 @@ test("generated numeric bounds and the combined feed window block invalid saves"
     page.getByRole("button", { exact: true, name: "Save" }),
   ).toBeDisabled();
   await page.getByRole("link", { exact: true, name: "Server" }).click();
+  await page
+    .getByRole("button", { exact: true, name: "Discard changes" })
+    .click();
+  await page.getByText("Cache", { exact: true }).click();
   await page
     .getByLabel("Maximum response (bytes)", { exact: true })
     .fill("67108865");
@@ -408,7 +414,7 @@ test("settings sections support direct URLs and client-side history without sign
   });
 });
 
-test("account bindings require both IDs and reject overflowing Seerr IDs", async ({
+test("account picker binds both verified IDs and key generation stays out of URLs", async ({
   configDocument,
   connect,
   page,
@@ -418,29 +424,21 @@ test("account bindings require both IDs and reject overflowing Seerr IDs", async
   await connect("/settings/access");
   await page.getByRole("button", { exact: true, name: "Add client" }).click();
   await page.getByLabel("Name", { exact: true }).fill("new-account");
-  await page
-    .getByLabel("Client key", { exact: true })
-    .fill("fake-new-account-key-00000000000000000");
-  await page.getByLabel("Permissions", { exact: true }).fill("catalog:view");
-  await page.getByLabel("Seerr user ID", { exact: true }).fill("1");
-  await page.getByLabel("Plex user ID", { exact: true }).focus();
-  await page.getByLabel("Name", { exact: true }).focus();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "Enter both Seerr and Plex user IDs",
+  await page.getByRole("button", { exact: true, name: "Generate key" }).click();
+  await expect(page.getByLabel("Client key", { exact: true })).toHaveValue(
+    /^[a-f0-9]{96}$/,
   );
-  await expect(
-    page.getByRole("button", { exact: true, name: "Save" }),
-  ).toBeDisabled();
-  await page.getByLabel("Plex user ID", { exact: true }).fill("999");
-  await page.getByLabel("Seerr user ID", { exact: true }).fill("4294967296");
-  await page.getByLabel("Name", { exact: true }).focus();
-  await expect(
-    page.getByLabel("Seerr user ID", { exact: true }),
-  ).toHaveAttribute("aria-invalid", "true");
-  await expect(
-    page.getByRole("button", { exact: true, name: "Save" }),
-  ).toBeDisabled();
-  expect(writes).toHaveLength(0);
+  await choose(page, "Requester account", "Fixture friend");
+  await setGrants(page, ["Browse request catalog"]);
+  await page.getByRole("button", { exact: true, name: "Save" }).click();
+  await expect(page.getByRole("status")).toHaveText("Saved and applied.");
+  expect(
+    writes
+      .at(-1)
+      ?.settings.clients.find((client) => client.name === "new-account")
+      ?.seerr_user,
+  ).toEqual({ id: 2, plex_id: 102 });
+  expect(page.url()).not.toMatch(/(?:key|plex|token|permissions)=/);
 });
 
 test("editing one client preserves its masked token and Plex binding", async ({
@@ -465,9 +463,11 @@ test("editing one client preserves its masked token and Plex binding", async ({
     .click();
   await expect(page.getByLabel("Client key", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("Name", { exact: true })).not.toBeEditable();
-  await page
-    .getByLabel("Permissions", { exact: true })
-    .fill("catalog:view, requests:view, metrics");
+  await setGrants(page, [
+    "Browse request catalog",
+    "View own requests",
+    "Read metrics",
+  ]);
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(page.getByRole("status")).toHaveText("Saved and applied.");
   const saved = writes.at(-1)?.settings;
@@ -492,19 +492,13 @@ test("the shared configuration credential cannot be bound to a requester", async
 
   await connect("/settings/access");
   await page.getByRole("button", { exact: true, name: "Edit reader" }).click();
-  await page.getByLabel("Seerr user ID", { exact: true }).fill("1");
-  await page.getByLabel("Plex user ID", { exact: true }).fill("101");
-
-  for (const permission of ["config:manage", "admin"]) {
-    await page.getByLabel("Permissions", { exact: true }).fill(permission);
-    await page.getByLabel("Seerr user ID", { exact: true }).focus();
-    await expect(page.getByRole("main").getByRole("alert")).toContainText(
-      "Keep configuration access and requester accounts on separate clients.",
-    );
-    await expect(
-      page.getByRole("button", { exact: true, name: "Save" }),
-    ).toBeDisabled();
-  }
+  await choose(page, "Requester account", "Fixture owner");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "Keep configuration access and requester accounts on separate clients.",
+  );
+  await expect(
+    page.getByRole("button", { exact: true, name: "Save" }),
+  ).toBeDisabled();
 
   expect(writes).toHaveLength(0);
 });
@@ -555,8 +549,8 @@ for (const connection of [
     await expect(
       action.getByRole("button", { exact: true, name: "Save" }),
     ).toBeVisible();
-    await page.getByRole("button", { exact: true, name: "Back" }).click();
-    await expect(page.getByRole("status")).toHaveCount(0);
+    await page.getByRole("link", { exact: true, name: "Back" }).click();
+    await expect(page.getByRole("status")).toHaveText("Saved and applied.");
   });
 }
 
@@ -565,15 +559,15 @@ test("feed titles use the server byte limit and retain spaces while typing", asy
   connect,
   page,
 }) => {
-  configDocument.settings.feed.title = "Ä".repeat(128);
+  configDocument.settings.instance.title = "Ä".repeat(128);
   const { writes } = await mockConfigEditor(page, configDocument);
 
-  await connect("/settings/feeds");
+  await connect("/settings/general");
   await expect(
     page.getByRole("button", { exact: true, name: "Save" }),
   ).toBeEnabled();
   await page.getByLabel("Title", { exact: true }).fill("Ä".repeat(129));
-  await page.getByLabel("Site URL", { exact: true }).focus();
+  await page.getByLabel("Public website", { exact: true }).focus();
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "maximum 256 UTF-8 bytes",
   );
@@ -589,7 +583,9 @@ test("feed titles use the server byte limit and retain spaces while typing", asy
   );
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(page.getByRole("status")).toHaveText("Saved and applied.");
-  expect(writes.at(-1)?.settings.feed.title).toBe("Friends release calendar");
+  expect(writes.at(-1)?.settings.instance.title).toBe(
+    "Friends release calendar",
+  );
 });
 
 test("editing tracking client access preserves its isolated native binding", async ({
@@ -597,6 +593,12 @@ test("editing tracking client access preserves its isolated native binding", asy
   connect,
   page,
 }) => {
+  configDocument.settings.sources.crosswatch = {
+    api_key: null,
+    kind: "crosswatch",
+    seerr_server_id: null,
+    url: "https://crosswatch.example.test/",
+  };
   const binding = {
     plex_id: 101,
     plex_server_owner: false,
@@ -617,9 +619,7 @@ test("editing tracking client access preserves its isolated native binding", asy
   await page
     .getByRole("button", { exact: true, name: "Edit tracking-alice" })
     .click();
-  await page
-    .getByLabel("Permissions", { exact: true })
-    .fill("crosswatch:tracking-view");
+  await setGrants(page, ["View personal tracking"]);
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(page.getByRole("status")).toHaveText("Saved and applied.");
   expect(

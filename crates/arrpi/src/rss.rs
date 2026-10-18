@@ -11,7 +11,7 @@ use rss::{Category, Channel, Guid, Item};
 
 use crate::{
     calendar::{Calendar, Event},
-    config::Feed,
+    config::Instance,
     error::{ApiError, HttpError},
     feeds,
     proxy::Gateway,
@@ -24,10 +24,10 @@ pub(crate) async fn export(
 ) -> Result<Response, HttpError> {
     let data = feeds::load(&gateway, raw.as_deref(), &headers).await?;
 
-    render(&gateway.feed, &data).map_err(HttpError)
+    render(&gateway.instance, &data).map_err(HttpError)
 }
 
-pub(crate) fn render(feed: &Feed, data: &Calendar) -> Result<Response, ApiError> {
+pub(crate) fn render(feed: &Instance, data: &Calendar) -> Result<Response, ApiError> {
     let mut channel = Channel::default();
 
     channel.set_title(feed.title.clone());

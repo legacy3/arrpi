@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 
 import type { Api } from "@/lib/api";
 import type { Components } from "@/lib/generated/contracts";
@@ -20,6 +20,26 @@ const states = {
   unconfigured: { label: "Not configured", tone: "bg-muted-foreground" },
 } as const;
 
+export function connectionHealthOptions(
+  api: Api,
+  source: string,
+  revision = 0,
+) {
+  return queryOptions({
+    queryFn: async ({ signal }) =>
+      (
+        await api.read<ConnectionHealth>(
+          `/v1/config/connections/${encodeURIComponent(source)}/health`,
+          true,
+          signal,
+        )
+      ).data,
+    queryKey: ["connection-health", source, revision],
+    retry: false,
+    staleTime: 30_000,
+  });
+}
+
 export function ConnectionStatus({
   api,
   configured,
@@ -31,20 +51,7 @@ export function ConnectionStatus({
   revision: number;
   source: string;
 }>) {
-  const query = useQuery({
-    enabled: configured,
-    queryFn: async ({ signal }) =>
-      (
-        await api.read<ConnectionHealth>(
-          `/v1/config/connections/${encodeURIComponent(source)}/health`,
-          true,
-          signal,
-        )
-      ).data,
-    queryKey: ["connection-health", revision, source],
-    retry: false,
-    staleTime: 0,
-  });
+  const query = useConnectionHealth(api, source, configured, revision);
   let state: keyof typeof states = "unconfigured";
 
   if (configured) {
@@ -66,18 +73,31 @@ export function ConnectionStatus({
     <span
       role="img"
       className="ml-auto flex shrink-0 items-center gap-2 text-xs text-muted-foreground"
-      aria-label={`${source}: ${isConfigured ? "Configured · " : ""}${label}`}
+      aria-label={`${source}: ${isConfigured ? "Configured, " : ""}${label}`}
     >
       <span
         aria-hidden="true"
         className={cn("size-1.5 shrink-0 rounded-full", tone)}
       />
       <span>
-        {isConfigured && (
-          <span className="hidden sm:inline">Configured · </span>
-        )}
+        {isConfigured && <span className="sr-only">Configured </span>}
         {label}
+        {query.data?.health_issue_count
+          ? ` (${query.data.health_issue_count})`
+          : ""}
       </span>
     </span>
   );
+}
+
+export function useConnectionHealth(
+  api: Api,
+  source: string,
+  configured = true,
+  revision = 0,
+) {
+  return useQuery({
+    ...connectionHealthOptions(api, source, revision),
+    enabled: configured,
+  });
 }

@@ -1,5 +1,6 @@
 import { useUpdateEffect } from "ahooks";
-import { useRef, useState } from "react";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect, useRef, useState } from "react";
 
 import type { SettingsDocument } from "@/lib/settings";
 
@@ -15,7 +16,18 @@ import {
 type Policy = NonNullable<SettingsDocument["oauth"]>;
 
 export function OAuth(props: EditorProps) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [entry, setEntry] = useQueryState("entry", parseAsString);
+  const selected =
+    entry === "__new" ? "" : (entry?.replace(/^subject:/, "") ?? null);
+  const setSelected = (value: string | null) => {
+    if (value === null) {
+      void setEntry(null);
+
+      return;
+    }
+
+    void setEntry(value === "" ? "__new" : `subject:${value}`);
+  };
   const [savedSection, setSavedSection] = useState<
     "provider" | "identity" | "configuration"
   >("provider");
@@ -25,9 +37,11 @@ export function OAuth(props: EditorProps) {
   const clients = requesterClients(settings);
   const configurationStatusRef = useRef<HTMLParagraphElement>(null);
 
-  if (selected && !binding) {
-    setSelected(null);
-  }
+  useEffect(() => {
+    if (selected && !binding) {
+      void setEntry(null);
+    }
+  }, [selected, binding, setEntry]);
 
   useUpdateEffect(() => {
     configurationStatusRef.current?.focus();
@@ -42,7 +56,6 @@ export function OAuth(props: EditorProps) {
     return (
       <EntryEditor
         title={binding ? "Edit OAuth identity" : "Add OAuth identity"}
-        onBack={() => select(null)}
       >
         <BindingEditor
           key={props.document.revision}

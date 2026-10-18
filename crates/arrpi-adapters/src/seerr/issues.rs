@@ -170,13 +170,16 @@ impl Backend {
             .call(binding, Method::POST, "issue", &[], Some(body))
             .await?;
 
-        issue(&value, binding.id).map_err(|error| {
+        let mut result = issue(&value, binding.id).map_err(|error| {
             tracing::debug!(
                 event = "command_failure",
                 category = std::any::type_name_of_val(&error)
             );
             ApiError::UNKNOWN_OUTCOME
-        })
+        })?;
+
+        model::with_media(&mut result, &metadata);
+        Ok(result)
     }
 }
 fn issue(value: &Value, actor: u64) -> Result<Value, ApiError> {

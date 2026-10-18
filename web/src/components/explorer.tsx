@@ -1,16 +1,16 @@
 "use client";
 
-import { useSetState } from "ahooks";
 import { Code, RefreshCw } from "lucide-react";
+import { parseAsString, useQueryStates } from "nuqs";
 
 import type { Api, Status } from "@/lib/api";
 import type { Catalog } from "@/lib/explorer";
 
-import { Choice } from "@/components/choice";
 import { EmptyState } from "@/components/empty-state";
 import { CommandForm } from "@/components/explorer-commands";
 import { ReadOperation } from "@/components/explorer-read";
 import { Notice } from "@/components/notice";
+import { SearchableChoice as Choice } from "@/components/searchable-choice";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { HttpError } from "@/lib/api";
@@ -21,7 +21,10 @@ export function Explorer({
   api,
   status,
 }: Readonly<{ api: Api; status: Status }>) {
-  const [selected, select] = useSetState({ operation: "", source: "*" });
+  const [selected, select] = useQueryStates({
+    operation: parseAsString.withDefault(""),
+    source: parseAsString.withDefault("*"),
+  });
   const catalog = useApiQuery<Catalog>(api, "/v1/tools");
   const inventory = useApiQuery<Status>(api, "/v1/status", {
     initialData: status,
@@ -76,7 +79,7 @@ export function Explorer({
             id="explorer-source"
             label="Source"
             value={source?.name ?? "*"}
-            onChange={(value) => select({ operation: "", source: value })}
+            onChange={(value) => void select({ operation: "", source: value })}
             options={[
               { label: "All sources", value: "*" },
               ...status.sources.map((item) => ({
@@ -94,7 +97,7 @@ export function Explorer({
               id="explorer-operation"
               label="Operation"
               value={operation.id}
-              onChange={(value) => select({ operation: value })}
+              onChange={(value) => void select({ operation: value })}
               options={available.map((item) => ({
                 label: item.label,
                 value: item.id,
@@ -123,10 +126,10 @@ export function Explorer({
             Account: {catalog.data.data.account}
           </p>
         )}
-      {content}
       {catalog.error && !commandsDisabled && (
         <Notice>{catalog.error.message}</Notice>
       )}
+      {content}
       {source?.account && commandsDisabled && (
         <Notice tone="info">
           Enable MCP in Settings to use account commands.

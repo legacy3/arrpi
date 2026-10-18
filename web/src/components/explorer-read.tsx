@@ -128,7 +128,7 @@ export function ReadOperation({
         {response?.cache && !error && (
           <Badge variant="secondary">
             {response.cache}
-            {response.age === null ? "" : ` · ${response.age}s`}
+            {response.age === null ? "" : `, ${response.age}s`}
           </Badge>
         )}
       </div>

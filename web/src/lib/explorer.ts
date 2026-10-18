@@ -30,7 +30,12 @@ export function operations(
       type: "summary" as const,
     })),
     ...commands
-      .filter((command) => !source || command.source === source.name)
+      .filter(
+        (command) =>
+          !source ||
+          command.source === source.name ||
+          command.sources?.includes(source.name),
+      )
       .toSorted(
         (left, right) =>
           Number(right.annotations?.readOnlyHint === true) -

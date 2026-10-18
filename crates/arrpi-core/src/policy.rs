@@ -25,6 +25,8 @@ pub struct Limits {
     pub batch_timeout_seconds: u64,
     #[schemars(range(min = 1, max = 500))]
     pub max_page_items: usize,
+    #[schemars(range(min = 1, max = 10_000))]
+    pub max_search_episodes: usize,
     #[schemars(range(min = 1, max = 32))]
     pub max_concurrent_writes: usize,
     #[schemars(range(min = 1, max = 300))]
@@ -38,6 +40,7 @@ impl Default for Limits {
             max_batch_items: 20,
             batch_timeout_seconds: 45,
             max_page_items: 100,
+            max_search_episodes: 1000,
             max_concurrent_writes: 4,
             queue_timeout_seconds: 15,
         }
@@ -62,6 +65,7 @@ impl Policy {
             || !(1..=100).contains(&self.limits.max_batch_items)
             || !(1..=300).contains(&self.limits.batch_timeout_seconds)
             || !(1..=500).contains(&self.limits.max_page_items)
+            || !(1..=10_000).contains(&self.limits.max_search_episodes)
             || !(1..=32).contains(&self.limits.max_concurrent_writes)
             || !(1..=300).contains(&self.limits.queue_timeout_seconds)
         {

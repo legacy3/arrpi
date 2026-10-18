@@ -21,6 +21,14 @@ enum ErrorKind {
     ProfileMismatch { request_id: u64 },
     #[error("profile is not selectable; use request_profiles for the current choices")]
     ProfileUnavailable,
+    #[error("automatic search requires a quality profile limited to 1080p or below")]
+    UnsafeSearchProfile,
+    #[error("native maintenance requires stable Sonarr 4 or Radarr 3 through 6")]
+    UnsupportedMaintenanceVersion,
+    #[error(
+        "search exceeds configured episode limits; narrow its scope or adjust MCP search/batch limits"
+    )]
+    SearchTooLarge,
     #[error("media is not tracked by Seerr; request it first")]
     MediaNotTracked,
     #[error("only pending non-4K requests can be cancelled")]
@@ -77,6 +85,10 @@ impl ApiError {
     pub const UNSUPPORTED_VERSION: Self = Self(ErrorKind::UnsupportedVersion);
     pub const UNKNOWN_OUTCOME: Self = Self(ErrorKind::UnknownOutcome);
     pub const PROFILE_UNAVAILABLE: Self = Self(ErrorKind::ProfileUnavailable);
+    pub const UNSAFE_SEARCH_PROFILE: Self = Self(ErrorKind::UnsafeSearchProfile);
+    pub const UNSUPPORTED_MAINTENANCE_VERSION: Self =
+        Self(ErrorKind::UnsupportedMaintenanceVersion);
+    pub const SEARCH_TOO_LARGE: Self = Self(ErrorKind::SearchTooLarge);
     pub const MEDIA_NOT_TRACKED: Self = Self(ErrorKind::MediaNotTracked);
     pub const REQUEST_NOT_PENDING: Self = Self(ErrorKind::RequestNotPending);
     pub const CONFLICT: Self = Self(ErrorKind::Conflict);
@@ -164,28 +176,24 @@ impl ApiError {
     pub const fn status(self) -> u16 {
         match self.0 {
             ErrorKind::BatchTimeout => 504,
-
             ErrorKind::Conflict | ErrorKind::RequestNotPending => 409,
-
             ErrorKind::Unauthorized => 401,
-
             ErrorKind::Forbidden => 403,
-
             ErrorKind::NotFound | ErrorKind::MediaNotTracked => 404,
-
-            ErrorKind::BadQuery | ErrorKind::ProfileUnavailable | ErrorKind::Configuration(_) => {
-                400
-            }
-
+            ErrorKind::BadQuery
+            | ErrorKind::ProfileUnavailable
+            | ErrorKind::UnsafeSearchProfile
+            | ErrorKind::SearchTooLarge
+            | ErrorKind::Configuration(_) => 400,
             ErrorKind::Busy
             | ErrorKind::QueueTimeout
             | ErrorKind::QuotaExceeded
             | ErrorKind::UpstreamRateLimited => 429,
-
-            ErrorKind::Capacity | ErrorKind::Interrupted | ErrorKind::UnsupportedVersion => 503,
-
+            ErrorKind::Capacity
+            | ErrorKind::Interrupted
+            | ErrorKind::UnsupportedVersion
+            | ErrorKind::UnsupportedMaintenanceVersion => 503,
             ErrorKind::Internal => 500,
-
             ErrorKind::UnknownOutcome
             | ErrorKind::ProfileMismatch { .. }
             | ErrorKind::Unavailable
@@ -206,6 +214,9 @@ impl ApiError {
             ErrorKind::BatchTimeout => "batch_timeout",
             ErrorKind::Configuration(_) => "invalid_configuration",
             ErrorKind::ProfileUnavailable => "profile_not_selectable",
+            ErrorKind::UnsafeSearchProfile => "unsafe_search_profile",
+            ErrorKind::UnsupportedMaintenanceVersion => "maintenance_disabled_unverified_version",
+            ErrorKind::SearchTooLarge => "search_too_large",
             ErrorKind::UpstreamBadQuery => "upstream_invalid_arguments",
             ErrorKind::UpstreamRateLimited => "upstream_rate_limited",
             ErrorKind::ResponseTooLarge => "upstream_response_too_large",
@@ -312,6 +323,9 @@ const PUBLIC_ERRORS: &[ApiError] = &[
     ApiError::UNAVAILABLE,
     ApiError::REJECTED,
     ApiError::PROFILE_UNAVAILABLE,
+    ApiError::UNSAFE_SEARCH_PROFILE,
+    ApiError::UNSUPPORTED_MAINTENANCE_VERSION,
+    ApiError::SEARCH_TOO_LARGE,
     ApiError::QUEUE_TIMEOUT,
     ApiError::QUOTA_EXCEEDED,
     ApiError::UNSUPPORTED_VERSION,

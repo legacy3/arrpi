@@ -169,7 +169,9 @@ function ClientEditor({
             Separate permissions with commas. Use source:endpoint for native
             reads, admin for full access, or catalog:view, requests:view and
             requests:create for a request account. Set both user IDs to bind a
-            Plex-linked Seerr account.
+            Plex-linked Seerr account. Library maintenance uses
+            source:library-refresh and source:library-search; these do not grant
+            access to configuration or arbitrary native writes.
           </p>
         </form.Editor>
       </form.AppForm>

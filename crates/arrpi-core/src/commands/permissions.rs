@@ -8,13 +8,32 @@ use crate::{
 };
 
 impl Commands {
+    /// Source choices for typed library maintenance, filtered by exact caller grants.
+    pub fn command_sources<'a>(
+        &'a self,
+        principal: &'a Principal,
+        tool: ToolId,
+    ) -> impl Iterator<Item = &'a str> {
+        self.sources
+            .iter()
+            .filter(move |(name, source)| {
+                source.maintenance().is_some()
+                    && super::maintenance::maintenance_permitted(principal, name, tool)
+                    && (tool != ToolId::SeriesEpisodes
+                        || source
+                            .library()
+                            .is_some_and(|library| library.media_type() == MediaType::Tv))
+            })
+            .map(|(name, _)| name)
+    }
+
     pub(super) fn allowed(&self, caller: &Caller<'_>, tool: ToolId) -> bool {
         !self
             .policy
             .disabled_tools
             .iter()
             .any(|name| name.as_ref() == tool.name())
-            && (!tool.is_write() || caller.compatible)
+            && (!tool.is_write() || tool.is_native() || caller.compatible)
             && self.permitted(caller, tool)
     }
 
@@ -24,6 +43,11 @@ impl Commands {
 
     pub(super) fn locally_permitted(&self, principal: &Principal, tool: ToolId) -> bool {
         match tool {
+            ToolId::RefreshMedia
+            | ToolId::SearchReleases
+            | ToolId::SeriesEpisodes
+            | ToolId::MediaCommandStatus => self.command_sources(principal, tool).next().is_some(),
+
             ToolId::QueueSummary | ToolId::LibrarySummary | ToolId::MonitoringStatus => {
                 super::summary_kind(tool).is_some_and(|kind| {
                     self.sources.iter().any(|(name, source)| {

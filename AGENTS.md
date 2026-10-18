@@ -5,7 +5,7 @@
 - Keep dependencies acyclic: app → core/adapters/MCP; adapters/MCP → core. Core owns traits and policy; adapters own HTTP and storage.
 - The Next.js/TypeScript UI lives in `web/`, uses pnpm, shadcn and `@wowlab/eslint-config`, and runs separately from Rust. Only core mounts SQLite.
 - Store settings and secrets in SQLite. Append numbered SQL migrations; never edit released migrations. Never log credentials, native URLs, query strings or response bodies.
-- Sonarr/Radarr are read-only. Send writes through the bound Seerr account. Authenticate before cache lookup; include source and query identity in cache keys.
+- Send media requests through the bound Seerr account. Sonarr/Radarr allow only typed metadata-refresh and release-search commands with explicit source grants; never expose arbitrary writes or change profiles, monitoring or tags. Authenticate before cache lookup; include source and query identity in cache keys.
 - Bound bodies, caches, requests and concurrency. Keep healthy source results when another source fails.
 - Tests use local fixtures and fake credentials. Do not modify owner configuration or real media.
 - Format Rust with rustfmt, Python with Black through uv, and supported files with Prettier. Commit Python helper locks.

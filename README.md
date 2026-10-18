@@ -10,7 +10,7 @@ ArrPi connects your media services through a cached API, CLI and MCP server, wit
 
 - **Dashboards:** library, queue and monitoring summaries, with per-source freshness and failures. Give each client a scoped key instead of sharing your apps’ API keys.
 - **Calendar:** movie releases and TV episodes together, with search, filters and personal RSS/iCalendar feeds.
-- **AI assistants:** search, recommendations, movie and season requests, issues and batch tools through MCP. Each account acts as its own Seerr user.
+- **AI assistants:** search, recommendations, requests, issues and batch tools through MCP. Refresh installed media or search for missing episodes without adding it again. Requests act as each account's Seerr user.
 - **Scripts:** a JSON CLI for automation and agents.
 
 ## Screenshots
@@ -112,7 +112,7 @@ cargo run --locked -p arrpi -- config key --database .arrpi/arrpi.sqlite
 
 ## MCP
 
-Requests and issues support stable **Seerr >=3.5.0, <4.0.0** releases. MCP accounts need **Plex-bound Seerr users**. Local, Jellyfin and Emby accounts are not supported yet.
+Requests and issues support stable **Seerr >=3.5.0, <4.0.0** releases and require **Plex-bound Seerr users**. Local, Jellyfin and Emby requester accounts are not supported yet. Native library and maintenance tools use separate source grants.
 
 1. Add Seerr and bind each ArrPi account to its Seerr user in **Settings**.
 2. Enable the server under **Settings → MCP**. Tool switches and limits are here too.

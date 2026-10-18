@@ -8,6 +8,7 @@ pub mod contracts;
 pub mod error;
 pub mod executor;
 pub mod library;
+pub mod maintenance;
 pub mod oauth;
 pub mod policy;
 pub mod registry;

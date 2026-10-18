@@ -109,6 +109,14 @@ no-referrer/no-store headers for these routes.
 
 See [MCP and media requests](mcp.md) for command inputs, pagination, errors and account-bound mutations. [Configuration](configuration.md) describes authentication, limits and backup. The generated [public schema](api/public.schema.json) describes owned API types; exact native version bundles and licenses are under [third_party/native-types](../third_party/native-types/README.md).
 
+Typed library maintenance also uses `POST /v1/tools/{tool}`: `refresh_media`,
+`search_releases`, `series_episodes` and `media_command_status`. Each accepts an exact
+source name and native library/command IDs. `GET /v1/tools` includes permitted `sources`
+for these operations; it does not grant arbitrary command writes. Source grants and
+the asynchronous refresh/search workflow are documented in
+[library maintenance](mcp.md#refresh-and-search-installed-media). The native passthrough
+endpoints above remain read-only.
+
 ## Operational summaries
 
 Summary reads work independently of MCP. Add a source in Settings and grant the exact operation needed; ordinary library/calendar access does not grant queue or monitoring data. `?no_cache=true` or `Cache-Control: no-cache` requires fresh upstream reads. Equivalent CLI/MCP tools are `queue_summary`, `library_summary` and `monitoring_status`.

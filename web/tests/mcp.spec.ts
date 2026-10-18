@@ -24,6 +24,22 @@ for (const origin of ["http://127.0.0.1:4173", "http://127.0.0.1:4174"]) {
     expect(await init.json()).toMatchObject({
       result: { serverInfo: { name: "arrpi" } },
     });
+    const catalog = await request.post(`${origin}/v1/mcp`, {
+      data: { id: 3, jsonrpc: "2.0", method: "tools/list" },
+      headers,
+    });
+    const definitions = (await catalog.json()) as {
+      result: { tools: { name: string }[] };
+    };
+
+    expect(definitions.result.tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining([
+        "refresh_media",
+        "search_releases",
+        "series_episodes",
+        "media_command_status",
+      ]),
+    );
     const result = await request.post(`${origin}/v1/mcp`, {
       data: {
         id: 2,

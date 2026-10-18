@@ -86,16 +86,9 @@ docker run --rm --name "$client_name" --network "container:$ui_name" --read-only
   --entrypoint /nodejs/bin/node "$ui_image" \
   -e 'fetch("http://127.0.0.1:3000/health",{signal:AbortSignal.timeout(10000)}).then(async r=>{if(!r.ok||await r.text()!=="drained")process.exit(1)}).catch(()=>process.exit(1))' &
 drain_pid=$!
-for ((attempt = 0; attempt < 20; attempt++)); do
-  if docker exec "$ui_name" /nodejs/bin/node -e 'if(!require("node:fs").existsSync("/run/proxy-test/draining"))process.exit(1)' > /dev/null 2>&1; then
-    break
-  fi
-  sleep 0.1
-done
-if ((attempt == 20)); then
-  echo "UI did not forward the drain request" >&2
-  exit 1
-fi
+# Docker must start the independent client before its request can reach the proxy.
+# Poll inside one process; keep the shutdown/draining assertions below unchanged.
+timeout 15 docker exec "$ui_name" /nodejs/bin/node -e 'const fs=require("node:fs"); function ready(){if(fs.existsSync("/run/proxy-test/draining"))process.exit(0);setTimeout(ready,50)} ready()' || fail "UI did not forward the drain request"
 
 # PID 1 receives SIGTERM directly. Both services must stop without SIGKILL.
 for name in "$ui_name" "$core_name"; do

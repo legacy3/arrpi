@@ -5,6 +5,7 @@ mod batch;
 mod broker;
 mod calendar;
 mod library;
+mod maintenance;
 mod permissions;
 mod profiles;
 mod services;
@@ -94,7 +95,9 @@ impl Commands {
         mut input: Value,
     ) -> Result<Value, ApiError> {
         let started = (self.clock)();
-        let audit_input = tool.is_write().then(|| audit::capture(&input));
+        let audit_input = tool
+            .is_write()
+            .then(|| audit::capture(&input, &self.sources));
 
         self.default_page(tool, &mut input);
         let result = self.run(principal, tool, input).await;
@@ -160,7 +163,7 @@ impl Commands {
                 ToolVisibility {
                     name: tool.name().to_owned(),
                     description: definition.description.to_string(),
-                    available: (!tool.is_write() || caller.compatible)
+                    available: (!tool.is_write() || tool.is_native() || caller.compatible)
                         && self.permitted(&caller, *tool),
                 }
             })
@@ -251,6 +254,11 @@ impl Commands {
         let caller = self.authorize(principal, tool).await?;
 
         match tool {
+            ToolId::RefreshMedia
+            | ToolId::SearchReleases
+            | ToolId::SeriesEpisodes
+            | ToolId::MediaCommandStatus => self.maintenance(principal, tool, input).await,
+
             ToolId::ListMovies | ToolId::ListSeries | ToolId::SearchLibrary => {
                 library::load(
                     &self.sources,
@@ -308,7 +316,7 @@ impl Commands {
             return Err(ApiError::FORBIDDEN);
         }
 
-        if tool.is_write() {
+        if tool.is_write() && !tool.is_native() {
             caller.compatible = self.compatible(principal).await?;
 
             if !caller.compatible {

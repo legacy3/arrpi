@@ -20,9 +20,15 @@ import { HttpError } from "@/lib/api";
 export function CommandForm({
   api,
   command,
-}: Readonly<{ api: Api; command: Command }>) {
+  source,
+}: Readonly<{ api: Api; command: Command; source?: string }>) {
   const client = useQueryClient();
-  const [input, setInput] = useState("{}");
+  const selectedSource =
+    source && command.sources?.includes(source) ? source : undefined;
+  const maintenance = (command.sources?.length ?? 0) > 0;
+  const [input, setInput] = useState(
+    selectedSource ? JSON.stringify({ source: selectedSource }, null, 2) : "{}",
+  );
   const [fresh, setFresh] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const readOnly = command.annotations?.readOnlyHint === true;
@@ -94,7 +100,9 @@ export function CommandForm({
             /v1/tools/{command.name}
           </code>
           <Badge variant={readOnly ? "secondary" : "outline"}>
-            {readOnly ? "Read only" : `Writes to ${command.source ?? "source"}`}
+            {readOnly
+              ? "Read only"
+              : `Writes to ${selectedSource ?? command.source ?? "library"}`}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">{command.description}</p>
@@ -140,7 +148,9 @@ export function CommandForm({
                 onCheckedChange={(value) => setConfirmed(value === true)}
               />
               <Label htmlFor="command-confirm">
-                Apply this change to my account
+                {maintenance
+                  ? "Apply this change to the library"
+                  : "Apply this change to my account"}
               </Label>
             </div>
           )}

@@ -1,6 +1,7 @@
 //! Sonarr and Radarr adapters share bounded native mechanics behind distinct source types.
 
 mod calendar;
+mod maintenance;
 mod profiles;
 mod summaries;
 
@@ -33,6 +34,7 @@ pub(crate) struct Pools {
     pub(crate) budget: Budget,
     pub(crate) normalizations: arrpi_core::admission::Normalizations,
     pub(crate) operational_cache: Arc<Cache>,
+    pub(crate) write_limits: arrpi_core::policy::Limits,
 }
 
 pub(crate) struct Native {
@@ -49,6 +51,10 @@ pub(crate) struct Native {
     limit: usize,
     budget: Budget,
     normalizations: arrpi_core::admission::Normalizations,
+    writes: Semaphore,
+    queue_timeout: Duration,
+    max_search_episodes: usize,
+    max_episode_search: usize,
 }
 
 impl Native {
@@ -85,6 +91,10 @@ impl Native {
             limit: policy.max_body_bytes,
             budget: pools.budget,
             normalizations: pools.normalizations,
+            writes: Semaphore::new(pools.write_limits.max_concurrent_writes),
+            queue_timeout: Duration::from_secs(pools.write_limits.queue_timeout_seconds),
+            max_search_episodes: pools.write_limits.max_search_episodes,
+            max_episode_search: pools.write_limits.max_batch_items,
         })
     }
 
@@ -224,6 +234,8 @@ macro_rules! native_sources {
             fn summaries(&self) -> Option<&dyn arrpi_core::summaries::SummarySource> { Some(&self.0) }
 
             fn library(&self) -> Option<&dyn LibrarySource> { Some(&self.0) }
+
+            fn maintenance(&self) -> Option<&dyn arrpi_core::maintenance::MaintenanceSource> { Some(&self.0) }
 
             fn calendar(&self) -> Option<&dyn CalendarSource> { Some(&self.0) }
 

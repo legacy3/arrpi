@@ -103,6 +103,10 @@ impl Commands {
             }
 
             ToolId::CancelRequest
+            | ToolId::RefreshMedia
+            | ToolId::SearchReleases
+            | ToolId::SeriesEpisodes
+            | ToolId::MediaCommandStatus
             | ToolId::CloseIssue
             | ToolId::CloseIssuesBatch
             | ToolId::ListMovies
@@ -166,6 +170,10 @@ impl Commands {
             }
 
             ToolId::ListIssues
+            | ToolId::RefreshMedia
+            | ToolId::SearchReleases
+            | ToolId::SeriesEpisodes
+            | ToolId::MediaCommandStatus
             | ToolId::ListMovies
             | ToolId::ListSeries
             | ToolId::MediaDetails

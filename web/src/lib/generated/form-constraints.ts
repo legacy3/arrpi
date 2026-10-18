@@ -21,6 +21,7 @@ export const numericFields = {
     max_batch_items: { default: 20, max: 100, min: 1 },
     max_concurrent_writes: { default: 4, max: 32, min: 1 },
     max_page_items: { default: 100, max: 500, min: 1 },
+    max_search_episodes: { default: 1000, max: 10000, min: 1 },
     queue_timeout_seconds: { default: 15, max: 300, min: 1 },
   },
   subscriptions: {

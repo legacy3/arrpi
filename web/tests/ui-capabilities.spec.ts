@@ -9,6 +9,33 @@ async function choose(page: Page, label: string, option: string) {
   await page.getByRole("option", { exact: true, name: option }).click();
 }
 
+test("Explorer scopes maintenance commands and presets the selected source", async ({
+  connect,
+  page,
+}) => {
+  await connect("/explorer");
+  await choose(page, "Source", "sonarr");
+  await choose(page, "Operation", "refresh_media");
+  await expect(page.getByLabel("Arguments (JSON)")).toHaveValue(
+    /"source": "sonarr"/,
+  );
+  await expect(
+    page.getByText("Writes to sonarr", { exact: true }),
+  ).toBeVisible();
+  await choose(page, "Source", "radarr");
+  await choose(page, "Operation", "refresh_media");
+  await expect(page.getByLabel("Arguments (JSON)")).toHaveValue(
+    /"source": "radarr"/,
+  );
+  await expect(
+    page.getByText("Writes to radarr", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
+  await expect(
+    page.getByRole("option", { exact: true, name: "series_episodes" }),
+  ).toHaveCount(0);
+});
+
 test("overview includes every installed source and normalized operational data", async ({
   connect,
   page,

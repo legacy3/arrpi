@@ -194,6 +194,16 @@ pub struct ToolStatsPage {
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema, Serialize)]
 pub struct AuditTarget {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub episode_ids: Option<Vec<u32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub missing_only: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tmdb_id: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_id: Option<u64>,

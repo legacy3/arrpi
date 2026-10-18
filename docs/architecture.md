@@ -30,7 +30,9 @@ Library selection parses borrowed native data, keeps the requested top-K page an
 
 ## Mutations and identity
 
-Sonarr/Radarr remain read-only. Request and issue mutations go through Seerr as the server-resolved account. Inputs cannot choose another actor, request 4K, inject native IDs for routing, replace tags or bypass quotas. Default services, profiles, requester tags and approvals remain Seerr policy.
+Media requests and issue mutations go through Seerr as the server-resolved account. Inputs cannot choose another actor, request 4K, inject native IDs for request routing, replace tags or bypass quotas. Default services, profiles, requester tags and approvals remain Seerr policy.
+
+Existing library maintenance is a separate `MaintenanceSource` capability. Explicit per-source grants authorize typed metadata refresh and automatic release searches; the native passthrough stays read-only. Maintenance never adds media or changes profiles, monitoring or tags. Search preflight checks fresh native state and a non-4K profile. TV searches exclude unmonitored and unaired episodes and default to missing files. Only fixed command names and typed IDs reach the native command endpoint. Admission and response reservations precede dispatch; ambiguous transport, server or receipt failures remain `unknown_outcome` with no retry. Episode/progress reads are uncached, and command receipts never imply completed downloads. Native maintenance does not impersonate a Seerr user or depend on its write-version gate; account requests retain those checks.
 
 Write admission is bounded. After waiting, adapters recheck native identity, permissions, request state and selected profile/service safety before dispatch. An ambiguous dispatched mutation returns `unknown_outcome`; automatic retries are disabled. Activity history is best effort, not an exactly-once journal. [MCP](mcp.md) documents the public workflow and uncertainty contract.
 

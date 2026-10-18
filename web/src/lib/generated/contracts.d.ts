@@ -39,16 +39,23 @@ export interface components {
     };
     /** @description Whitelisted coordinates of a write attempt; free text is never recorded. */
     AuditTarget: {
+      /** Format: uint64 */
+      command_id?: number | null;
       /** Format: uint32 */
       episode?: number | null;
+      episode_ids?: number[] | null;
       /** Format: uint64 */
       issue_id?: number | null;
+      /** Format: uint64 */
+      item_id?: number | null;
       media_type?: components["schemas"]["MediaType"] | null;
+      missing_only?: boolean | null;
       /** Format: uint64 */
       request_id?: number | null;
       /** Format: uint32 */
       season?: number | null;
       seasons?: number[] | null;
+      source?: string | null;
       /** Format: uint64 */
       tmdb_id?: number | null;
     };
@@ -253,6 +260,8 @@ export interface components {
       inputSchema: components["schemas"]["InputSchema"];
       name: string;
       source?: string | null;
+      /** @description Sources permitted for commands that accept an explicit source argument. */
+      sources?: string[];
     };
     /** @description Receipt for an applied revision; listener changes require a process restart. */
     ConfigUpdateResult: {
@@ -369,6 +378,11 @@ export interface components {
        */
       max_page_items: number;
       /**
+       * Format: uint
+       * @default 1000
+       */
+      max_search_episodes: number;
+      /**
        * Format: uint64
        * @default 15
        */
@@ -397,6 +411,7 @@ export interface components {
        *       "max_batch_items": 20,
        *       "max_concurrent_writes": 4,
        *       "max_page_items": 100,
+       *       "max_search_episodes": 1000,
        *       "queue_timeout_seconds": 15
        *     }
        */
@@ -549,6 +564,7 @@ export interface components {
        *         "max_batch_items": 20,
        *         "max_concurrent_writes": 4,
        *         "max_page_items": 100,
+       *         "max_search_episodes": 1000,
        *         "queue_timeout_seconds": 15
        *       },
        *       "public_url": null

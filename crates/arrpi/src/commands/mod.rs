@@ -27,6 +27,14 @@ pub(crate) async fn http_list(
             let account = ToolId::parse(&definition.name).is_some_and(|tool| !tool.is_native());
             let mut descriptor = CommandDescriptor::from(definition);
 
+            if let Some(tool) = ToolId::parse(&descriptor.name) {
+                descriptor.sources = gateway
+                    .commands
+                    .command_sources(principal, tool)
+                    .map(str::to_owned)
+                    .collect();
+            }
+
             descriptor.source = broker
                 .filter(|_| account)
                 .map(|source| source.descriptor().name.clone());

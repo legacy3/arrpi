@@ -248,6 +248,10 @@ pub trait ApiSource: Debug + Send + Sync {
         None
     }
 
+    fn maintenance(&self) -> Option<&dyn crate::maintenance::MaintenanceSource> {
+        None
+    }
+
     fn calendar(&self) -> Option<&dyn CalendarSource> {
         None
     }

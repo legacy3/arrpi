@@ -91,6 +91,7 @@ pub fn build(config: &Config, clock: fn() -> Instant) -> Result<BuiltSources, Co
                 budget: budget.clone(),
                 normalizations: normalizations.clone(),
                 operational_cache,
+                write_limits: config.mcp.limits,
             },
             cache,
         )?;

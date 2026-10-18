@@ -7,7 +7,7 @@ account its own client key with its Seerr user ID and stable Plex user ID. Only 
 at `/settings/mcp` to enable the server and tune tools/limits. The **MCP** page at `/mcp` contains connections, account access, usage statistics and write history. MCP transport requires a saved Seerr connection.
 The page has separate **Copy Claude Code**, **Copy Codex** and **Copy Gemini CLI** buttons. Each copies one complete install command with the selected account token. Claude/Gemini use native HTTP with user scope. The generated Codex command uses `mcp-remote` through `npx` to supply a literal Bearer header; Node/npx is required on that client machine, not in core.
 
-The activity page shows per-account grants; global tool switches live in **Settings → MCP**. Admin/configuration keys cannot be copied as MCP credentials. A deleted or mismatched native account fails closed; tools recheck Seerr permissions on every call. Tokens, bindings and connection settings live in SQLite.
+The activity page shows per-account grants; global tool switches live in **Settings → MCP**. Admin/configuration keys cannot be copied as MCP credentials. Account tools fail closed for deleted/mismatched Seerr accounts and recheck native permissions on every call. Library maintenance uses separate source grants. Tokens, bindings and connection settings live in SQLite.
 
 `/v1/mcp` is a stateless Streamable HTTP endpoint. Configure a public
 HTTPS endpoint in Settings, route that exact path to ArrPi, and supply the account's
@@ -41,8 +41,29 @@ Only permitted tools are advertised.
 | Quota and health     | `my_quota`, `service_status`                                                                                                    |
 | Operational counters | `queue_summary`, `library_summary`, `monitoring_status`                                                                         |
 | Calendar             | `upcoming_releases`                                                                                                             |
+| Library maintenance  | `refresh_media`, `series_episodes`, `search_releases`, `media_command_status`                                                   |
 
 Library pages contain at most the configured page limit (default 100) and report totals, completeness and source freshness. Catalog results contain TMDB IDs and public links; native paths and user objects are omitted.
+
+## Refresh and search installed media
+
+For “check whether this series has a new episode we are missing”:
+
+1. Resolve the exact title with `search_library` or `list_series`. Keep its `source` and native `id`; a TMDB ID is not interchangeable.
+2. Call `refresh_media` with `{"source":"shows","item_id":7}`. This queues metadata refresh and a file scan, including updated episode metadata. It does not search indexers.
+3. Wait briefly and check `media_command_status` with the returned `source` and `command_id`. A queued/started command has not finished. Continue only after `successful:true`.
+4. Call `series_episodes` with `{"source":"shows","item_id":7,"missing_only":true,"aired_only":true}`. Follow `next_offset` to inspect all matching episodes; `monitored` identifies those eligible for automatic search. Unknown air dates remain unknown.
+5. Call `search_releases` with the same source/item ID to search monitored aired missing episodes. Add `season` or explicit native `episode_ids` to narrow the search; these scopes cannot be combined.
+
+Movie refresh and automatic searches use the same tools with a Radarr source. Existing files are skipped by default. `missing_only:false` explicitly permits profile-governed upgrades. Neither mode changes quality profiles, monitoring or tags, adds media, or performs a manual release grab. Searches refuse unknown or 4K-enabled quality profiles; adding new media still goes through Seerr requests. Whole-series missing searches use Sonarr's native bulk command, which groups seasons and excludes queued episodes. Narrow episode selections use native episode searches.
+
+Grant `source:library-refresh` for metadata refresh and `source:library-search` for automatic searches. Either permits safe command-status reads. Episode listing requires `source:library-view`. These grants are separate from read access and Seerr request permissions; an existing read-only client gains no write access. Global tool switches apply, and the UI Explorer lists maintenance under each permitted source. Maintenance needs the shared MCP/command layer enabled but does not require a requester binding or a compatible Seerr write version.
+
+Episode pages use the configured page limit. Individual episode searches—including narrowed season selections and upgrade searches—use the configured batch limit (20 by default, up to 100), because Sonarr searches each selected episode separately. Whole-series missing searches use native season grouping and the separate **Episodes per automatic search** limit under **Settings → MCP** (1,000 by default, up to 10,000). Select smaller scopes or tune those limits when `search_too_large` is returned. Unmonitored series and searches without eligible items return `nothing_to_search` and an explicit reason without submitting a command. A metadata refresh can still inspect an unmonitored item. Concurrent write admission is per source.
+
+Maintenance writes support stable Sonarr 4 and Radarr 3–6, including compatible patch/minor updates. ArrPi checks the native version before dispatch and verifies that the decoded command receipt retained its requested scope. Unsupported versions leave reads available and reject mutations. There is no older-version fallback that could turn an ignored scoping field into a library-wide refresh.
+
+`refresh_media` and `search_releases` return asynchronous native command receipts. `media_command_status` reads current command state without exposing native messages, paths or command bodies. `completed` means the command finished, not that a suitable release was found, downloaded or imported; inspect episode availability and the queue afterward. Native command records can expire. Do not poll continuously or retry an `unknown_outcome` automatically: inspect current commands/queue/media first. Use `no_cache:true` on library reads after a refresh; episode and command-status reads are always fresh.
 
 ## Requests and profiles
 
@@ -112,6 +133,10 @@ include partial batches. Tools/list and invalid credentials are not counted.
 The protected MCP page/API shows paginated **Write history** per selected account. `GET /v1/config/mcp/audit?client=<name>&offset=0&limit=20` requires config management. The same SQLite file records time, client name, original bound Seerr actor, tool, numeric media/request/issue IDs, season coordinates and outcome. It never stores issue messages, search text, titles, arbitrary arguments or credentials. Request/issue batches record attempted items independently, including uncertain outcomes, and skip unsubmitted items. Retention defaults to 10,000 entries **per account**, configurable through **Settings → MCP** and applied on each write. Key rotation preserves history; client rename/removal does not rewrite old rows, and reusing a name retains its past actor IDs. This is bounded best-effort activity history, not an exactly-once/retry journal; audit storage failure never causes an already-issued write to be retried.
 Cancellation after upstream acceptance can also leave an attempt without its final
 history row. Reconcile native request state before retrying an uncertain write.
+
+Library maintenance history also records the confirmed source, native item ID and
+command ID when known. These entries share the existing audit retention and statistics;
+no separate database or native credentials are exposed.
 
 ## Native metadata limits
 

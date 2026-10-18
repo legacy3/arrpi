@@ -53,6 +53,7 @@ export function Explorer({
         key={`${source?.name ?? "*"}:${operation.id}`}
         api={api}
         command={operation.command}
+        source={source?.name}
       />
     );
   } else if (operation) {

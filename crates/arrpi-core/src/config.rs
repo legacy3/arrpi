@@ -529,6 +529,12 @@ impl SourceKind {
     }
 
     fn allows_permission(self, endpoint: &str) -> bool {
+        if matches!(self, Self::Sonarr | Self::Radarr)
+            && matches!(endpoint, "library-refresh" | "library-search")
+        {
+            return true;
+        }
+
         if self == Self::Crosswatch && matches!(endpoint, "tracking-view" | "tracking-manage") {
             return true;
         }

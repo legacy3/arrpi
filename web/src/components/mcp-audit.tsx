@@ -135,6 +135,10 @@ function targetLabel(target: AuditTarget) {
   return (
     [
       target.tmdb_id == null ? null : `TMDB ${target.tmdb_id}`,
+      target.item_id == null
+        ? null
+        : `${target.source ?? "library"} #${target.item_id}`,
+      target.command_id == null ? null : `command #${target.command_id}`,
       target.seasons?.length ? `S${target.seasons.join(", ")}` : null,
       target.request_id == null ? null : `request #${target.request_id}`,
       target.issue_id == null ? null : `issue #${target.issue_id}`,

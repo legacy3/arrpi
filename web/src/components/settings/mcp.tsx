@@ -16,8 +16,9 @@ const limitLabels: Record<keyof typeof numericFields.mcp, string> = {
   audit_max_entries: "Write history entries per account",
   batch_timeout_seconds: "Write batch budget (seconds)",
   max_batch_items: "Items per batch",
-  max_concurrent_writes: "Concurrent writes",
+  max_concurrent_writes: "Concurrent writes per source",
   max_page_items: "Items per page",
+  max_search_episodes: "Episodes per automatic search",
   queue_timeout_seconds: "Queue wait (seconds)",
 };
 const limitNames = Object.keys(

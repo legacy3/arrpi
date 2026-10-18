@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { connection } from "next/server";
 
 import { StyleNonce } from "@/components/style-nonce";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 
@@ -33,7 +34,9 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark">
       <body>
-        <StyleNonce nonce={nonce}>{children}</StyleNonce>
+        <StyleNonce nonce={nonce}>
+          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        </StyleNonce>
       </body>
     </html>
   );

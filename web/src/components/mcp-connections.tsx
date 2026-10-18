@@ -49,8 +49,8 @@ export function McpConnections({
         </Button>
       }
     >
-      <div className="space-y-4 px-5 pb-5">
-        <div className="max-w-md">
+      <div className="flex flex-wrap items-center gap-3 px-5 pb-4">
+        <div className="w-full lg:w-80">
           <div className="flex min-w-0 items-center gap-3">
             <Label className="w-14 shrink-0" htmlFor="mcp-account">
               Account
@@ -72,12 +72,11 @@ export function McpConnections({
             />
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 lg:ml-auto">
           {mcpClients.map(({ id, label }) => (
             <Button
               key={id}
               variant="outline"
-              size="sm"
               aria-label={`Copy ${label}`}
               disabled={!allowed || copy.isPending}
               onClick={() => copy.mutate({ account: selected, kind: id })}
@@ -92,11 +91,17 @@ export function McpConnections({
             </Button>
           ))}
         </div>
-        {copy.error && <Notice>{copy.error.message}</Notice>}
+        {copy.error && (
+          <div className="w-full">
+            <Notice>{copy.error.message}</Notice>
+          </div>
+        )}
         {ready && !allowed && (
-          <Notice tone="info">
-            Choose a Plex-bound account without ArrPi admin grants.
-          </Notice>
+          <div className="w-full">
+            <Notice tone="info">
+              Choose a Plex-bound account without ArrPi admin grants.
+            </Notice>
+          </div>
         )}
       </div>
     </Panel>

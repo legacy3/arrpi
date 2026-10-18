@@ -1,13 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { parseAsString, useQueryState } from "nuqs";
+import {
+  parseAsArrayOf,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
+} from "nuqs";
 import { z } from "zod";
 
 import type { McpStatus } from "@/components/mcp";
 
 import { Notice } from "@/components/notice";
 import { SearchField } from "@/components/search-field";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useFuzzySearch } from "@/hooks/use-fuzzy-search";
 import { numericFields } from "@/lib/generated/form-constraints";
@@ -93,6 +104,10 @@ function McpEditor(
     "tools",
     parseAsString.withDefault(""),
   );
+  const [expanded, setExpanded] = useQueryState(
+    "expanded",
+    parseAsArrayOf(parseAsStringLiteral(["limits", "tools"])).withDefault([]),
+  );
   const matches = useFuzzySearch({
     items: props.tools,
     keys: TOOL_KEYS,
@@ -148,78 +163,87 @@ function McpEditor(
             />
           )}
         </form.AppField>
-        <details className="rounded-lg border p-4">
-          <summary className="cursor-pointer font-medium">
-            Advanced limits
-          </summary>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {limitNames.map((name) => (
-              <form.AppField key={name} name={`limits.${name}`}>
-                {(field) => (
-                  <field.Number
-                    label={limitLabels[name]}
-                    {...numericFields.mcp[name]}
-                  />
-                )}
-              </form.AppField>
-            ))}
-          </div>
-        </details>
-        <details className="rounded-lg border p-4">
-          <summary className="cursor-pointer font-medium">
-            Tools ({props.tools.length})
-          </summary>
-          <div className="mt-4 grid gap-3">
-            <SearchField
-              label="Search tool switches"
-              value={search}
-              onChange={(value) => void setSearch(value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              These switches apply to all accounts. Account grants and Seerr
-              permissions still apply.
-            </p>
-            {props.loading && (
-              <p role="status" className="text-muted-foreground">
-                Loading tools…
-              </p>
-            )}
-            <form.AppField name="disabled_tools">
-              {(field) => (
-                <div className="grid gap-x-5 sm:grid-cols-2">
-                  {matches.map((tool) => (
-                    <label
-                      key={tool.name}
-                      className="flex items-start gap-3 py-3"
-                    >
-                      <Checkbox
-                        className="mt-1"
-                        aria-label={`Enable ${tool.name}`}
-                        checked={!field.state.value.includes(tool.name)}
-                        onBlur={field.handleBlur}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(
-                            checked === true
-                              ? field.state.value.filter(
-                                  (name) => name !== tool.name,
-                                )
-                              : [...field.state.value, tool.name],
-                          )
-                        }
+        <Accordion
+          type="multiple"
+          value={expanded}
+          onValueChange={(value) =>
+            void setExpanded(value as ("limits" | "tools")[])
+          }
+          className="gap-3"
+        >
+          <AccordionItem value="limits" className="rounded-lg border px-4">
+            <AccordionTrigger>Advanced limits</AccordionTrigger>
+            <AccordionContent>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {limitNames.map((name) => (
+                  <form.AppField key={name} name={`limits.${name}`}>
+                    {(field) => (
+                      <field.Number
+                        label={limitLabels[name]}
+                        {...numericFields.mcp[name]}
                       />
-                      <span className="min-w-0">
-                        <span className="text-sm">{tool.title}</span>
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          {tool.name}
-                        </span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </form.AppField>
-          </div>
-        </details>
+                    )}
+                  </form.AppField>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="tools" className="rounded-lg border px-4">
+            <AccordionTrigger>Tools ({props.tools.length})</AccordionTrigger>
+            <AccordionContent>
+              <div className="mt-4 grid gap-3">
+                <SearchField
+                  label="Search tool switches"
+                  value={search}
+                  onChange={(value) => void setSearch(value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  These switches apply to all accounts. Account grants and Seerr
+                  permissions still apply.
+                </p>
+                {props.loading && (
+                  <p role="status" className="text-muted-foreground">
+                    Loading tools…
+                  </p>
+                )}
+                <form.AppField name="disabled_tools">
+                  {(field) => (
+                    <div className="grid gap-x-5 sm:grid-cols-2">
+                      {matches.map((tool) => (
+                        <label
+                          key={tool.name}
+                          className="flex items-start gap-3 py-3"
+                        >
+                          <Checkbox
+                            className="mt-1"
+                            aria-label={`Enable ${tool.name}`}
+                            checked={!field.state.value.includes(tool.name)}
+                            onBlur={field.handleBlur}
+                            onCheckedChange={(checked) =>
+                              field.handleChange(
+                                checked === true
+                                  ? field.state.value.filter(
+                                      (name) => name !== tool.name,
+                                    )
+                                  : [...field.state.value, tool.name],
+                              )
+                            }
+                          />
+                          <span className="min-w-0">
+                            <span className="text-sm">{tool.title}</span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {tool.name}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </form.AppField>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </form.Editor>
     </form.AppForm>
   );

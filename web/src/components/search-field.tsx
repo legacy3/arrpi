@@ -1,27 +1,32 @@
 import { Search, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 
 export function SearchField({
   className,
   label = "Search",
   onChange,
+  placeholder,
   value,
 }: Readonly<{
   value: string;
   onChange: (value: string) => void;
   label?: string;
+  placeholder?: string;
   className?: string;
 }>) {
   return (
-    <div className={cn("relative min-w-0", className)}>
-      <Search
-        aria-hidden
-        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-      />
-      <Input
+    <InputGroup className={cn("min-w-0", className)}>
+      <InputGroupAddon>
+        <Search aria-hidden />
+      </InputGroupAddon>
+      <InputGroupInput
         type="search"
         aria-label={label}
         onKeyDown={(event) => {
@@ -29,24 +34,25 @@ export function SearchField({
             event.preventDefault();
           }
         }}
-        placeholder={label}
+        placeholder={placeholder ?? label}
         value={value}
         maxLength={128}
         onChange={(event) => onChange(event.target.value)}
-        className="pl-9 pr-9 [&::-webkit-search-cancel-button]:appearance-none"
+        className="[&::-webkit-search-cancel-button]:appearance-none"
       />
       {value && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Clear ${label.toLowerCase()}`}
-          className="absolute right-1 top-1/2 -translate-y-1/2"
-          onClick={() => onChange("")}
-        >
-          <X className="size-3.5" />
-        </Button>
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Clear ${label.toLowerCase()}`}
+            onClick={() => onChange("")}
+          >
+            <X className="size-3.5" />
+          </InputGroupButton>
+        </InputGroupAddon>
       )}
-    </div>
+    </InputGroup>
   );
 }

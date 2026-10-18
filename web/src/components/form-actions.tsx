@@ -48,7 +48,7 @@ export function FormActions({
     <div
       ref={actionsRef}
       data-slot="form-actions"
-      className="sticky bottom-4 z-10 flex flex-wrap items-center justify-end gap-3 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur"
+      className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-3 border-t bg-background/95 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur"
     >
       {error && !conflict && (
         <div className="min-w-0 flex-1">

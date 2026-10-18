@@ -17,12 +17,12 @@ export function Panel({
   return (
     <Card className={cn("gap-0 py-0", className)}>
       {title && (
-        <CardHeader className="px-5 py-5">
+        <CardHeader className="min-h-14 items-center px-5 py-3">
           <CardTitle>
             <h2 className="text-sm font-semibold">{title}</h2>
           </CardTitle>
           {detail !== undefined && (
-            <CardAction className="text-xs text-muted-foreground">
+            <CardAction className="row-span-1 self-center text-xs text-muted-foreground">
               {detail}
             </CardAction>
           )}

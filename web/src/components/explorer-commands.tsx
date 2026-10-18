@@ -20,6 +20,12 @@ import {
 import { JsonResponse } from "@/components/json-response";
 import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -142,10 +148,16 @@ export function CommandForm({
             : command.description}
         </p>
         {mode === "guided" && (
-          <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer">Command details</summary>
-            <p className="mt-2 leading-relaxed">{command.description}</p>
-          </details>
+          <Accordion type="multiple">
+            <AccordionItem value="command-details">
+              <AccordionTrigger className="py-1 text-xs text-muted-foreground">
+                Command details
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="mt-2 leading-relaxed">{command.description}</p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         )}
         {guidedCommands.has(command.name) && (
           <Tabs value={mode} onValueChange={setMode}>
@@ -167,15 +179,17 @@ export function CommandForm({
             />
           ) : (
             <>
-              <details>
-                <summary className="cursor-pointer text-sm">
-                  Input schema
-                </summary>
-                <JsonResponse
-                  label="Command input schema"
-                  value={command.inputSchema}
-                />
-              </details>
+              <Accordion type="multiple">
+                <AccordionItem value="schema">
+                  <AccordionTrigger>Input schema</AccordionTrigger>
+                  <AccordionContent>
+                    <JsonResponse
+                      label="Command input schema"
+                      value={command.inputSchema}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
               <div className="grid gap-2">
                 <Label htmlFor="command-arguments">Arguments (JSON)</Label>
                 <Textarea
@@ -222,7 +236,7 @@ export function CommandForm({
           )}
           <Button
             type="submit"
-            className="sm:ml-auto"
+            className="ml-auto"
             disabled={mutation.isPending || (!readOnly && !confirmed)}
           >
             <Play className="size-4" />

@@ -2,12 +2,14 @@
 
 import { useDebounce, useResetState } from "ahooks";
 import { Activity, ChevronDown, RefreshCw } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
 
 import type { Api } from "@/lib/api";
 import type { Components } from "@/lib/generated/contracts";
 
+import { AuditOutcome } from "@/components/audit-outcome";
 import {
   CommandProgress,
   type CommandTarget,
@@ -16,8 +18,19 @@ import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
 import { SearchField } from "@/components/search-field";
 import { SearchableChoice } from "@/components/searchable-choice";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -26,6 +39,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   errorText,
   fullTime,
@@ -61,6 +79,8 @@ export function McpAudit({
     [filters.days, now],
   );
   const offset = Math.max(0, filters.offset);
+  const path = usePathname();
+  const searchParams = useSearchParams();
   const limit = Math.min(10, pageLimit);
   const params = new URLSearchParams({
     client,
@@ -105,6 +125,18 @@ export function McpAudit({
     filters.outcome !== "*" ||
     filters.days,
   );
+
+  function pageHref(next: number) {
+    const query = new URLSearchParams(searchParams.toString());
+
+    if (next > 0) {
+      query.set("offset", String(next));
+    } else {
+      query.delete("offset");
+    }
+
+    return query.size > 0 ? `${path}?${query}` : path;
+  }
 
   return (
     <Panel
@@ -177,14 +209,16 @@ export function McpAudit({
         </div>
       ) : (
         <>
-          <Table aria-label="Write history">
+          <Table aria-label="Write history" className="table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead className="hidden w-36 pl-5 md:table-cell">
                   When
                 </TableHead>
-                <TableHead className="pl-5 md:pl-2">Action and media</TableHead>
-                <TableHead className="pr-5 text-right">Outcome</TableHead>
+                <TableHead className="pl-5 md:pl-4">Action and media</TableHead>
+                <TableHead className="w-36 pr-5 text-right min-[360px]:w-44 sm:w-52">
+                  Outcome
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -204,71 +238,89 @@ export function McpAudit({
                         {shortTime(row.created_at)}
                       </time>
                     </TableCell>
-                    <TableCell className="w-full max-w-0 whitespace-normal py-3 pl-5 align-top md:pl-2">
-                      <div className="text-xs text-muted-foreground">
-                        {label}
-                      </div>
-                      <div className="mt-0.5 break-words font-medium">
-                        {row.target.tmdb_id && row.target.media_type ? (
-                          <a
-                            href={`https://www.themoviedb.org/${row.target.media_type}/${row.target.tmdb_id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hover:text-primary hover:underline"
-                          >
-                            {title}
-                          </a>
-                        ) : (
-                          title
+                    <TableCell className="whitespace-normal pl-5 align-top md:pl-4">
+                      <Collapsible className="group/history">
+                        <div className="text-xs text-muted-foreground">
+                          {label}
+                        </div>
+                        <div className="mt-0.5 flex items-start gap-2">
+                          <div className="min-w-0 flex-1 break-words font-medium">
+                            {row.target.tmdb_id && row.target.media_type ? (
+                              <a
+                                href={`https://www.themoviedb.org/${row.target.media_type}/${row.target.tmdb_id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:text-primary hover:underline"
+                              >
+                                {title}
+                              </a>
+                            ) : (
+                              title
+                            )}
+                          </div>
+                          <CollapsibleTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon-xs"
+                              variant="ghost"
+                              aria-label={`Technical details for ${title}`}
+                              className="relative -mr-1 after:absolute after:-inset-1"
+                            >
+                              <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/history:rotate-180" />
+                            </Button>
+                          </CollapsibleTrigger>
+                        </div>
+                        {targetScope(row.target) && (
+                          <p className="mt-1 break-words text-xs text-muted-foreground">
+                            {targetScope(row.target)}
+                          </p>
+                        )}
+                        <time
+                          className="mt-1 block text-xs text-muted-foreground md:hidden"
+                          dateTime={row.created_at}
+                          title={fullTime(row.created_at)}
+                        >
+                          {shortTime(row.created_at)}
+                        </time>
+                        <CollapsibleContent className="mt-2 text-xs text-muted-foreground">
+                          <p className="mt-1">{errorText(row.outcome)}</p>
+                          <code className="mt-1 block break-all">
+                            {JSON.stringify(row.target)}
+                          </code>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </TableCell>
+                    <TableCell className="whitespace-normal pr-5 text-right align-top">
+                      <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-start gap-1">
+                        <div className="flex min-h-8 items-center justify-end">
+                          <AuditOutcome outcome={row.outcome} />
+                        </div>
+                        {Boolean(
+                          row.target.command_id && row.target.source,
+                        ) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Check progress for ${title}`}
+                                onClick={() =>
+                                  setProgress({
+                                    command_id: row.target.command_id ?? 0,
+                                    source: row.target.source ?? "",
+                                    title,
+                                  })
+                                }
+                              >
+                                <Activity className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Check command progress
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
-                      <p className="mt-1 break-words text-xs text-muted-foreground">
-                        {targetScope(row.target)}
-                      </p>
-                      <time
-                        className="mt-1 block text-xs text-muted-foreground md:hidden"
-                        dateTime={row.created_at}
-                        title={fullTime(row.created_at)}
-                      >
-                        {shortTime(row.created_at)}
-                      </time>
-                      <details className="mt-1 text-xs text-muted-foreground">
-                        <summary className="inline-flex cursor-pointer items-center gap-1">
-                          <ChevronDown className="size-3" />
-                          Details
-                        </summary>
-                        <p className="mt-1">{errorText(row.outcome)}</p>
-                        <code className="mt-1 block break-all">
-                          {JSON.stringify(row.target)}
-                        </code>
-                      </details>
-                    </TableCell>
-                    <TableCell className="w-28 whitespace-normal pr-5 text-right align-top">
-                      <Badge
-                        variant="outline"
-                        title={errorText(row.outcome)}
-                        className="h-auto min-h-5 max-w-full whitespace-normal text-left text-xs"
-                      >
-                        {outcomeLabel(row.outcome)}
-                      </Badge>
-                      {Boolean(row.target.command_id && row.target.source) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-1 h-8 px-1 text-xs"
-                          aria-label={`Check progress for ${title}`}
-                          onClick={() =>
-                            setProgress({
-                              command_id: row.target.command_id ?? 0,
-                              source: row.target.source ?? "",
-                              title,
-                            })
-                          }
-                        >
-                          <Activity className="size-3.5" />
-                          Progress
-                        </Button>
-                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -302,30 +354,53 @@ export function McpAudit({
               )}
             </TableBody>
           </Table>
-          <div className="flex items-center justify-between gap-3 px-5 py-3">
+          <div className="flex items-center justify-between gap-3 border-t px-5 py-3">
             <span className="text-xs text-muted-foreground">{countLabel}</span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={offset === 0 || query.isFetching}
-                onClick={() =>
-                  void setFilters({ offset: Math.max(0, offset - limit) })
-                }
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={data?.next_offset == null || query.isFetching}
-                onClick={() =>
-                  void setFilters({ offset: data?.next_offset ?? 0 })
-                }
-              >
-                Next
-              </Button>
-            </div>
+            <Pagination
+              aria-label="Write history pages"
+              className="mx-0 w-auto"
+            >
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href={pageHref(Math.max(0, offset - limit))}
+                    aria-disabled={offset === 0 || query.isFetching}
+                    tabIndex={offset === 0 || query.isFetching ? -1 : undefined}
+                    className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                    onClick={(event) => {
+                      event.preventDefault();
+
+                      if (offset > 0 && !query.isFetching) {
+                        void setFilters({
+                          offset: Math.max(0, offset - limit),
+                        });
+                      }
+                    }}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    href={pageHref(data?.next_offset ?? offset)}
+                    aria-disabled={
+                      data?.next_offset == null || query.isFetching
+                    }
+                    tabIndex={
+                      data?.next_offset == null || query.isFetching
+                        ? -1
+                        : undefined
+                    }
+                    className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                    onClick={(event) => {
+                      event.preventDefault();
+
+                      if (data?.next_offset != null && !query.isFetching) {
+                        void setFilters({ offset: data.next_offset });
+                      }
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </>
       )}

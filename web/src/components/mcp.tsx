@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, CircleCheck, RefreshCw } from "lucide-react";
+import { ChevronDown, CircleAlert, CircleCheck, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import {
   parseAsInteger,
@@ -23,6 +23,11 @@ import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Table,
   TableBody,
   TableCell,
@@ -37,15 +42,18 @@ import { useApiQuery } from "@/lib/use-api-query";
 
 export type McpStatus = Components["schemas"]["McpStatus"];
 const SEARCH_KEYS = ["name", "title", "description"] as const;
-const accessReasons: Record<string, string> = {
-  account_not_linked: "Link a Seerr account",
-  account_permission: "Not allowed by Seerr",
-  account_unverified: "Verify linked account",
-  missing_grant: "Needs an access grant",
-  seerr_unavailable: "Seerr unavailable",
-  server_disabled: "MCP disabled",
-  tool_disabled: "Disabled for all accounts",
-  unverified_version: "Seerr version unverified",
+const accessReasons: Record<string, { label: string; detail: string }> = {
+  account_not_linked: { detail: "Link a Seerr account", label: "Unlinked" },
+  account_permission: { detail: "Not allowed by Seerr", label: "Seerr denied" },
+  account_unverified: { detail: "Verify linked account", label: "Unverified" },
+  missing_grant: { detail: "Needs an access grant", label: "Needs grant" },
+  seerr_unavailable: { detail: "Seerr is unavailable", label: "Seerr down" },
+  server_disabled: { detail: "MCP is disabled", label: "MCP off" },
+  tool_disabled: { detail: "Disabled for all accounts", label: "Disabled" },
+  unverified_version: {
+    detail: "Seerr version is unverified",
+    label: "Check Seerr",
+  },
 };
 
 type UiState = {
@@ -243,18 +251,20 @@ function McpActivity({
               <Notice>{statistics.error.message}</Notice>
             </div>
           )}
-          <Table aria-label="Tools">
+          <Table aria-label="Tools" className="table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead className="pl-5">Tool</TableHead>
-                <TableHead>Access</TableHead>
-                <TableHead className="hidden text-right md:table-cell">
+                <TableHead className="w-32 pr-5 sm:w-44 md:pr-4">
+                  Access
+                </TableHead>
+                <TableHead className="hidden w-16 text-right md:table-cell">
                   Calls
                 </TableHead>
-                <TableHead className="hidden text-right md:table-cell">
+                <TableHead className="hidden w-16 text-right md:table-cell">
                   Errors
                 </TableHead>
-                <TableHead className="hidden pr-5 lg:table-cell">
+                <TableHead className="hidden w-36 pr-5 lg:table-cell">
                   Last used
                 </TableHead>
               </TableRow>
@@ -277,19 +287,29 @@ function McpActivity({
 
                 return (
                   <TableRow key={tool.name}>
-                    <TableCell className="w-full max-w-0 whitespace-normal py-3 pl-5">
-                      <div className="font-medium">{tool.title}</div>
-                      <p
-                        className="mt-1 line-clamp-2 text-xs text-muted-foreground"
-                        title={tool.description}
-                      >
-                        {tool.description.split(". ")[0]}
-                      </p>
-                      <details className="mt-1 text-xs text-muted-foreground">
-                        <summary className="cursor-pointer">Details</summary>
-                        <code className="break-all">{tool.name}</code>
-                        <p className="mt-1">{tool.description}</p>
-                      </details>
+                    <TableCell className="whitespace-normal pl-5 align-top">
+                      <Collapsible className="group/tool">
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            aria-label={`Details for ${tool.title}`}
+                            className="h-auto min-h-6 w-full justify-start whitespace-normal p-0 text-left hover:bg-transparent hover:text-primary"
+                          >
+                            <span className="min-w-0 break-words">
+                              {tool.title}
+                            </span>
+                            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/tool:rotate-180" />
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                            {tool.description}
+                          </p>
+                          <code className="mt-2 block break-all text-xs text-muted-foreground">
+                            {tool.name}
+                          </code>
+                        </CollapsibleContent>
+                      </Collapsible>
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground md:hidden">
                         <span>{statistics.data ? calls : "Unknown"} calls</span>
                         <span>
@@ -297,37 +317,42 @@ function McpActivity({
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="w-36 whitespace-normal align-top">
+                    <TableCell className="whitespace-normal pr-5 align-top md:pr-4">
                       <Badge
+                        asChild={Boolean(reason)}
                         variant="outline"
                         className="h-auto min-h-5 whitespace-normal text-xs"
                       >
-                        {reason
-                          ? (accessReasons[reason] ??
-                            reason.replaceAll("_", " "))
-                          : "Available"}
+                        {reason ? (
+                          <Link
+                            aria-label={`Review access for ${tool.title}`}
+                            title={
+                              accessReasons[reason]?.detail ??
+                              reason.replaceAll("_", " ")
+                            }
+                            className="text-primary hover:underline"
+                            href={
+                              reason === "tool_disabled" ||
+                              reason === "server_disabled"
+                                ? "/settings/mcp"
+                                : `/settings/access?entry=${encodeURIComponent(selected)}`
+                            }
+                          >
+                            {accessReasons[reason]?.label ??
+                              reason.replaceAll("_", " ")}
+                          </Link>
+                        ) : (
+                          "Available"
+                        )}
                       </Badge>
-                      {reason && (
-                        <Link
-                          className="mt-1 block text-xs text-primary hover:underline"
-                          href={
-                            reason === "tool_disabled" ||
-                            reason === "server_disabled"
-                              ? "/settings/mcp"
-                              : `/settings/access?entry=${encodeURIComponent(selected)}`
-                          }
-                        >
-                          Review access
-                        </Link>
-                      )}
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums md:table-cell">
+                    <TableCell className="hidden text-right align-top tabular-nums md:table-cell">
                       {statistics.data ? calls : "Unknown"}
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums md:table-cell">
+                    <TableCell className="hidden text-right align-top tabular-nums md:table-cell">
                       {statistics.data ? errors : "Unknown"}
                     </TableCell>
-                    <TableCell className="hidden pr-5 text-xs text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden pr-5 align-top text-xs text-muted-foreground lg:table-cell">
                       {last ? (
                         <time dateTime={last} title={fullTime(last)}>
                           {shortTime(last)}

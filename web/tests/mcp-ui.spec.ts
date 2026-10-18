@@ -126,7 +126,7 @@ test("MCP activity lists access and usage, copies connections and links to setti
   await page.getByRole("tab", { name: "Tools and usage" }).click();
   await expect(
     page.getByRole("row").filter({ hasText: "Cancel request" }),
-  ).toContainText("Needs an access grant");
+  ).toContainText("Needs grant");
   expect(
     await page.getByRole("heading", { level: 2 }).first().textContent(),
   ).toBe("Connect a client");
@@ -176,7 +176,12 @@ test("MCP activity lists access and usage, copies connections and links to setti
   }
 
   await choose(page, "Account", "mcp-friend");
-  const usage = page.getByRole("row").filter({ hasText: "search_media" });
+  const usage = page.getByRole("row").filter({
+    has: page.getByRole("button", {
+      exact: true,
+      name: "Details for Search media",
+    }),
+  });
 
   await expect(usage).toContainText("Search media");
   await expect(usage).toContainText("9");
@@ -186,10 +191,7 @@ test("MCP activity lists access and usage, copies connections and links to setti
   await page.getByRole("link", { exact: true, name: "MCP settings" }).click();
   await expect(page).toHaveURL(/\/settings\/mcp$/);
   await page.getByText("Advanced limits", { exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Tools \(/ })
-    .click();
+  await page.getByRole("button", { name: /^Tools \(/ }).click();
   await page.getByLabel("Items per batch", { exact: true }).fill("30");
   await page
     .getByLabel("Write history entries per account", { exact: true })
@@ -211,8 +213,13 @@ test("MCP activity lists access and usage, copies connections and links to setti
     .getByRole("link", { exact: true, name: "MCP" })
     .click();
   await expect(
-    page.getByRole("row").filter({ hasText: "search_media" }),
-  ).toContainText("MCP disabled");
+    page.getByRole("row").filter({
+      has: page.getByRole("button", {
+        exact: true,
+        name: "Details for Search media",
+      }),
+    }),
+  ).toContainText("MCP off");
   const refreshed = page.waitForRequest(
     (request) =>
       new URL(request.url()).pathname === "/v1/mcp/status" &&
@@ -276,10 +283,7 @@ test("MCP settings conflicts preserve edits until explicitly reloaded", async ({
 
   await connect("/settings/mcp");
   await page.getByText("Advanced limits", { exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Tools \(/ })
-    .click();
+  await page.getByRole("button", { name: /^Tools \(/ }).click();
   await page.getByLabel("Items per batch", { exact: true }).fill("25");
   mock.setConflict(true);
   configDocument.revision += 1;
@@ -309,10 +313,7 @@ test("MCP settings validate inputs and preserve unrelated configuration", async 
 
   await connect("/settings/mcp");
   await page.getByText("Advanced limits", { exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Tools \(/ })
-    .click();
+  await page.getByRole("button", { name: /^Tools \(/ }).click();
   await expect(
     page.getByRole("heading", { exact: true, name: "MCP server" }),
   ).toBeVisible();
@@ -385,10 +386,7 @@ test("MCP settings explain missing Seerr and disable the master switch", async (
 
   await connect("/settings/mcp");
   await page.getByText("Advanced limits", { exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Tools \(/ })
-    .click();
+  await page.getByRole("button", { name: /^Tools \(/ }).click();
   await expect(page.getByLabel("Enable MCP", { exact: true })).toBeDisabled();
   await page
     .getByRole("link", { name: "Seerr connection in Settings" })
@@ -398,10 +396,7 @@ test("MCP settings explain missing Seerr and disable the master switch", async (
   document.revision += 1;
   await connect("/settings/mcp");
   await page.getByText("Advanced limits", { exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Tools \(/ })
-    .click();
+  await page.getByRole("button", { name: /^Tools \(/ }).click();
   await expect(page.getByLabel("Enable MCP", { exact: true })).toBeChecked();
   await page.getByLabel("Enable MCP", { exact: true }).uncheck();
   await expect(page.getByLabel("Enable MCP", { exact: true })).toBeDisabled();
@@ -423,10 +418,7 @@ test("MCP settings remain editable when the tool registry is unavailable", async
   );
   await connect("/settings/mcp");
   await page.getByText("Advanced limits", { exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Tools \(/ })
-    .click();
+  await page.getByRole("button", { name: /^Tools \(/ }).click();
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
   await page.getByLabel("Items per batch", { exact: true }).fill("25");
   await page.getByLabel("Enable MCP", { exact: true }).uncheck();
@@ -472,10 +464,7 @@ test("a late registry preserves edits and disabled tools outside its response", 
   });
   await connect("/settings/mcp");
   await page.getByText("Advanced limits", { exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Tools \(/ })
-    .click();
+  await page.getByRole("button", { name: /^Tools \(/ }).click();
   await page.getByLabel("Items per batch", { exact: true }).fill("28");
   await expect.poll(() => Boolean(release)).toBe(true);
   release?.();

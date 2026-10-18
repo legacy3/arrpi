@@ -188,11 +188,15 @@ test("calendar shows freshness, filters, escapes titles and refreshes upstream",
   await expect(page.getByText("stale, 123s", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => "pwned" in window)).toBe(false);
   await expect(page.locator(".event-list img")).toHaveCount(0);
-  await page.getByLabel("Search events").fill("Film");
+  await page
+    .getByRole("searchbox", { exact: true, name: "Search events" })
+    .fill("Film");
   await expect(
     page.getByText("Eine ziemlich gute Serie", { exact: true }),
   ).toHaveCount(0);
-  await page.getByLabel("Search events").fill("");
+  await page
+    .getByRole("searchbox", { exact: true, name: "Search events" })
+    .fill("");
   const fresh = page.waitForRequest(
     (request) =>
       request.url().includes("/v1/calendar") &&

@@ -72,8 +72,8 @@ export function Explorer({
 
   return (
     <>
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="grid min-w-0 flex-1 gap-2 sm:flex-none">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] items-end gap-2 sm:flex sm:gap-3">
+        <div className="grid min-w-0 gap-2">
           <Label htmlFor="explorer-source">Source</Label>
           <Choice
             id="explorer-source"
@@ -91,7 +91,7 @@ export function Explorer({
           />
         </div>
         {operation && (
-          <div className="grid min-w-0 flex-1 gap-2 sm:flex-none">
+          <div className="grid min-w-0 gap-2">
             <Label htmlFor="explorer-operation">Operation</Label>
             <Choice
               id="explorer-operation"
@@ -108,7 +108,7 @@ export function Explorer({
         )}
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           disabled={catalog.isFetching || inventory.isFetching}
           aria-label="Refresh available operations"
           onClick={() => {

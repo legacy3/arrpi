@@ -252,7 +252,7 @@ function ProviderEditor(props: EditorProps) {
   return (
     <form.AppForm>
       <form.Editor mutation={mutation} message={props.message}>
-        <h2 className="font-semibold">OAuth provider</h2>
+        <h2 className="text-lg font-semibold">OAuth provider</h2>
         <p className="text-sm text-muted-foreground">
           Connect MCP clients through an OAuth provider. It must issue signed
           at+jwt access tokens for the MCP public URL and required scope.

@@ -3,6 +3,12 @@ import { useMemo, useState } from "react";
 import type { SettingsDocument } from "@/lib/settings";
 
 import { SearchField } from "@/components/search-field";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useFuzzySearch } from "@/hooks/use-fuzzy-search";
 const SEARCH_KEYS = ["label", "value", "group"] as const;
@@ -120,9 +126,10 @@ export function Grants({
               {rows.map((option) => (
                 <label
                   key={option.value}
-                  className="flex items-start gap-2 text-sm"
+                  className="flex min-h-8 cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50"
                 >
                   <Checkbox
+                    className="mt-0.5"
                     checked={selected.includes(option.value)}
                     onCheckedChange={(checked) =>
                       onChange(
@@ -140,14 +147,18 @@ export function Grants({
           </fieldset>
         ))}
       </div>
-      <details>
-        <summary className="cursor-pointer text-sm text-muted-foreground">
-          Raw grants
-        </summary>
-        <p className="mt-2 break-words font-mono text-xs">
-          {selected.join(", ") || "No permissions selected"}
-        </p>
-      </details>
+      <Accordion type="multiple">
+        <AccordionItem value="raw-grants">
+          <AccordionTrigger className="text-muted-foreground">
+            Raw grants
+          </AccordionTrigger>
+          <AccordionContent>
+            <p className="mt-2 break-words font-mono text-xs">
+              {selected.join(", ") || "No permissions selected"}
+            </p>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }

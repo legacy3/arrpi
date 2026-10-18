@@ -6,6 +6,12 @@ import type { Api, SummaryKind } from "@/lib/api";
 
 import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { appInfo, errorText } from "@/lib/presentation";
 import {
@@ -81,10 +87,16 @@ export function OperationalSummary({
                       {row.source} is unavailable.
                     </span>{" "}
                     {errorText(row.code)}
-                    <details className="mt-1 text-xs">
-                      <summary>Technical details</summary>
-                      <code>{row.code}</code>
-                    </details>
+                    <Accordion type="multiple" className="mt-1">
+                      <AccordionItem value="error">
+                        <AccordionTrigger className="py-1 text-xs">
+                          Technical details
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <code>{row.code}</code>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </Notice>
                 ) : (
                   <>

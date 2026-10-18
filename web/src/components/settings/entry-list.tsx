@@ -1,4 +1,4 @@
-import { useBoolean, useMount, useUpdateEffect } from "ahooks";
+import { useMount } from "ahooks";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -10,8 +10,26 @@ import type { SettingsDocument } from "@/lib/settings";
 import { ConfigConflict } from "@/components/config-conflict";
 import { Notice } from "@/components/notice";
 import { SearchField } from "@/components/search-field";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item";
 import { useFuzzySearch } from "@/hooks/use-fuzzy-search";
 import { useConfigMutation } from "@/lib/use-config-mutation";
 
@@ -107,27 +125,34 @@ export function EntryList({
       </div>
       <ul className="divide-y border-t">
         {matches.map((entry) => (
-          <li
+          <Item
+            asChild
             key={entry.id}
-            className="flex items-center justify-between gap-4 px-5 py-3"
+            className="flex-nowrap rounded-none border-0 px-5 py-3"
           >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{entry.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {entry.detail}
-              </p>
-            </div>
-            {entry.status}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label={entry.editLabel ?? `Edit ${entry.name}`}
-              onClick={() => onSelect(entry.id)}
-            >
-              Edit
-            </Button>
-          </li>
+            <li>
+              <ItemContent className="min-w-0 gap-0.5">
+                <ItemTitle className="block max-w-full truncate">
+                  {entry.name}
+                </ItemTitle>
+                <ItemDescription className="truncate text-xs">
+                  {entry.detail}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions className="shrink-0 gap-3">
+                {entry.status}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={entry.editLabel ?? `Edit ${entry.name}`}
+                  onClick={() => onSelect(entry.id)}
+                >
+                  Edit
+                </Button>
+              </ItemActions>
+            </li>
+          </Item>
         ))}
       </ul>
       {matches.length === 0 && (
@@ -154,8 +179,6 @@ export function RemoveEntry({
     label: string;
     settings: SettingsDocument;
   }>) {
-  const [confirm, { setFalse, setTrue }] = useBoolean();
-  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const removeButtonRef = useRef<HTMLButtonElement>(null);
 
   useMount(() => {
@@ -164,9 +187,6 @@ export function RemoveEntry({
     }
   });
 
-  useUpdateEffect(() => {
-    (confirm ? cancelButtonRef : removeButtonRef).current?.focus();
-  }, [confirm]);
   const mutation = useConfigMutation<void>(
     props.api,
     props.document,
@@ -179,51 +199,52 @@ export function RemoveEntry({
     <div className="grid justify-items-start gap-3 border-t pt-4">
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       {blocked && <p className="text-xs text-muted-foreground">{blocked}</p>}
-      {mutation.conflict && <ConfigConflict reload={mutation.reload} />}
-      {mutation.error && !mutation.conflict && (
-        <Notice>{mutation.error.message}</Notice>
-      )}
-      {confirm ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm">Remove {label} from ArrPi?</p>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
           <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            disabled={
-              Boolean(blocked) || mutation.isPending || mutation.conflict
-            }
-            onClick={() => mutation.mutate()}
-          >
-            Confirm removal
-          </Button>
-          <Button
-            ref={cancelButtonRef}
             type="button"
             variant="ghost"
             size="sm"
-            onClick={setFalse}
+            className="text-destructive"
+            ref={removeButtonRef}
+            disabled={Boolean(blocked) || mutation.isPending}
+            onClick={props.onEdit}
           >
-            Cancel
+            <Trash2 className="size-4" />
+            Remove {label}
           </Button>
-        </div>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-destructive"
-          ref={removeButtonRef}
-          disabled={Boolean(blocked) || mutation.isPending}
-          onClick={() => {
-            props.onEdit();
-            setTrue();
-          }}
-        >
-          <Trash2 className="size-4" />
-          Remove {label}
-        </Button>
-      )}
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {label} from ArrPi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes its ArrPi configuration. Upstream media is not
+              deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {mutation.conflict && <ConfigConflict reload={mutation.reload} />}
+          {mutation.error && !mutation.conflict && (
+            <Notice>{mutation.error.message}</Notice>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={mutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={
+                Boolean(blocked) || mutation.isPending || mutation.conflict
+              }
+              onClick={(event) => {
+                event.preventDefault();
+                mutation.mutate();
+              }}
+            >
+              Confirm removal
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -244,7 +265,7 @@ function EntryHeading({
     <h2
       ref={headingRef}
       tabIndex={-1}
-      className="scroll-mt-24 font-semibold outline-none"
+      className="scroll-mt-24 text-lg font-semibold outline-none"
     >
       {children}
     </h2>

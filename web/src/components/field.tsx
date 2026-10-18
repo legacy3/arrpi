@@ -1,17 +1,18 @@
+import { FieldLabel, Field as FormField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export function Field({
-  label,
   name,
+  id = name,
+  label,
   ...props
 }: Readonly<
   { label: string; name: string } & React.ComponentProps<typeof Input>
 >) {
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} autoComplete="off" {...props} />
-    </div>
+    <FormField data-invalid={props["aria-invalid"]}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input id={id} name={name} autoComplete="off" {...props} />
+    </FormField>
   );
 }

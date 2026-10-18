@@ -133,7 +133,7 @@ function HealthRow({
   const Icon = presentation.icon;
 
   return (
-    <li className="border-b last:border-b-0">
+    <li className="border-b last:border-b-0 sm:[&:nth-child(odd):not(:last-child)]:border-r sm:[&:nth-last-child(2)]:border-b-0">
       <Link
         href={`/settings?entry=${encodeURIComponent(source.name)}`}
         className="flex min-h-11 items-center justify-between gap-2 px-5 py-2 hover:bg-accent/50"

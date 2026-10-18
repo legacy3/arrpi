@@ -10,8 +10,14 @@ import type { SettingsDocument, SettingsEnvelope } from "@/lib/settings";
 import { Choice } from "@/components/choice";
 import { DirtyFormGuard } from "@/components/dirty-form-guard";
 import { FormActions } from "@/components/form-actions";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useConfigMutation } from "@/lib/use-config-mutation";
 
 export type EditorProps = Readonly<{
@@ -33,20 +39,24 @@ function Control({
   const field = useFieldContext<unknown>();
 
   return (
-    <div
-      className={
-        inline
-          ? "flex flex-wrap items-center gap-2"
-          : "grid content-start gap-2"
-      }
+    <Field
+      orientation={inline ? "horizontal" : "vertical"}
+      data-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
     >
       {inline && children}
-      <label htmlFor={field.name} className="text-sm font-medium">
-        {label}
-      </label>
-      {!inline && children}
-      <Errors />
-    </div>
+      {inline ? (
+        <FieldContent>
+          <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+          <Errors />
+        </FieldContent>
+      ) : (
+        <>
+          <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+          {children}
+          <Errors />
+        </>
+      )}
+    </Field>
   );
 }
 
@@ -110,32 +120,28 @@ function Editor({
 function Errors() {
   const field = useFieldContext<unknown>();
   const errors = field.state.meta.isTouched ? field.state.meta.errors : [];
-  const messages = [
-    ...new Set(
-      errors.map((error: unknown) => {
+
+  return (
+    <FieldError
+      id={`${field.name}-error`}
+      className="text-xs"
+      errors={errors.map((error: unknown) => {
         if (typeof error === "string") {
-          return error;
+          return { message: error };
         }
 
-        return error &&
-          typeof error === "object" &&
-          "message" in error &&
-          typeof error.message === "string"
-          ? error.message
-          : "Invalid value";
-      }),
-    ),
-  ];
-
-  return messages.length > 0 ? (
-    <p
-      id={`${field.name}-error`}
-      role="alert"
-      className="text-xs text-destructive"
-    >
-      {messages.join(". ")}
-    </p>
-  ) : null;
+        return {
+          message:
+            error &&
+            typeof error === "object" &&
+            "message" in error &&
+            typeof error.message === "string"
+              ? error.message
+              : "Invalid value",
+        };
+      })}
+    />
+  );
 }
 
 function NumberInput({
@@ -229,13 +235,13 @@ function Toggle({
 
   return (
     <Control label={label} inline>
-      <Checkbox
+      <Switch
         disabled={disabled}
         id={field.name}
         name={field.name}
         checked={field.state.value}
         onBlur={field.handleBlur}
-        onCheckedChange={(checked) => field.handleChange(checked === true)}
+        onCheckedChange={field.handleChange}
         aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
         aria-describedby={
           field.state.meta.isTouched && !field.state.meta.isValid

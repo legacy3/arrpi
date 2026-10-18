@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Clock3,
   RefreshCw,
-  Search,
 } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
@@ -16,9 +15,15 @@ import { Choice } from "@/components/choice";
 import { EmptyState } from "@/components/empty-state";
 import { Notice } from "@/components/notice";
 import { Panel } from "@/components/panel";
+import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useFuzzySearch } from "@/hooks/use-fuzzy-search";
 import {
   type Api,
@@ -79,16 +84,21 @@ export function Calendar({
 
   return (
     <Panel>
-      <div className="flex flex-wrap items-center gap-3 border-b p-5">
-        <div className="flex w-full items-center gap-1.5 lg:w-auto">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Previous month"
-            onClick={() => changeMonth(shiftMonth(month, -1))}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
+      <div className="grid grid-cols-[minmax(0,1fr)_2.25rem_2.25rem] items-center gap-2 border-b p-5 min-[360px]:grid-cols-[7rem_minmax(0,1fr)_2.25rem] lg:flex lg:flex-wrap lg:gap-3">
+        <div className="col-span-3 flex min-w-0 items-center gap-1.5 min-[360px]:col-span-2 lg:w-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Previous month"
+                onClick={() => changeMonth(shiftMonth(month, -1))}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Previous month</TooltipContent>
+          </Tooltip>
           <Input
             aria-label="Month"
             type="month"
@@ -96,25 +106,36 @@ export function Calendar({
             max="9999-12"
             value={month}
             onChange={(event) => changeMonth(event.target.value)}
-            className="w-44 flex-1 text-sm font-medium lg:flex-none"
+            className="w-44 flex-1 px-2 text-sm font-medium lg:flex-none"
           />
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Next month"
-            onClick={() => changeMonth(shiftMonth(month, 1))}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-1 text-muted-foreground"
-            onClick={() => changeMonth(currentMonth())}
-          >
-            This month
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Next month"
+                onClick={() => changeMonth(shiftMonth(month, 1))}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Next month</TooltipContent>
+          </Tooltip>
         </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              aria-label="This month"
+              className="col-start-2 row-start-2 w-9 px-0 text-muted-foreground min-[360px]:col-start-3 min-[360px]:row-start-1 xl:w-auto xl:px-3.5"
+              onClick={() => changeMonth(currentMonth())}
+            >
+              <CalendarDays className="size-4" />
+              <span className="hidden xl:inline">This month</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>This month</TooltipContent>
+        </Tooltip>
         <Choice
           label="Calendar source"
           value={source || "__all__"}
@@ -125,30 +146,33 @@ export function Calendar({
               .filter((item) => item.calendar)
               .map((item) => ({ label: item.name, value: item.name })),
           ]}
-          className="w-36"
+          className="col-start-1 row-start-2 w-full gap-1 px-2 lg:w-32"
         />
-        <div className="relative min-w-28 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            aria-label="Search events"
-            type="search"
+        <div className="relative col-span-3 row-start-3 min-w-0 min-[360px]:col-span-1 min-[360px]:col-start-2 min-[360px]:row-start-2 lg:min-w-32 lg:flex-1">
+          <SearchField
+            label="Search events"
             placeholder="Search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="pl-9"
+            onChange={setSearch}
           />
         </div>
-        <Button
-          variant="outline"
-          aria-label="Refresh calendar from upstream"
-          disabled={query.isFetching || !selected}
-          onClick={() => query.refresh()}
-        >
-          <RefreshCw
-            className={cn("size-4", query.isFetching && "animate-spin")}
-          />
-          <span className="hidden sm:inline">Refresh</span>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              aria-label="Refresh calendar from upstream"
+              className="col-start-3 row-start-2 w-9 px-0 xl:w-auto xl:px-3.5"
+              disabled={query.isFetching || !selected}
+              onClick={() => query.refresh()}
+            >
+              <RefreshCw
+                className={cn("size-4", query.isFetching && "animate-spin")}
+              />
+              <span className="hidden xl:inline">Refresh</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Refresh calendar</TooltipContent>
+        </Tooltip>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
         <div className="flex flex-wrap gap-2">

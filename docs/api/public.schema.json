@@ -2235,7 +2235,7 @@
   },
   "info": {
     "title": "ArrPi public API",
-    "version": "0.1.7"
+    "version": "0.1.8"
   },
   "openapi": "3.1.0",
   "paths": {}

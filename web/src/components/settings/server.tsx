@@ -1,4 +1,12 @@
+import { parseAsArrayOf, parseAsStringLiteral, useQueryState } from "nuqs";
+
 import { Field } from "@/components/field";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { numericFields } from "@/lib/generated/form-constraints";
 import {
   policyGroups,
@@ -11,6 +19,12 @@ import { type EditorProps, useSettingsForm } from "./form";
 import { cacheSchema } from "./schemas";
 
 export function Server(props: EditorProps) {
+  const [expanded, setExpanded] = useQueryState(
+    "expanded",
+    parseAsArrayOf(
+      parseAsStringLiteral(policyGroups.map((group) => group.title)),
+    ).withDefault([]),
+  );
   const { settings } = props.document;
   const { form, mutation } = useSettingsForm(
     props,
@@ -24,32 +38,45 @@ export function Server(props: EditorProps) {
       <form.AppForm>
         <form.Editor mutation={mutation} message={props.message}>
           <h2 className="text-lg font-semibold">Advanced server settings</h2>
-          {policyGroups.map((group) => (
-            <details key={group.title} className="group rounded-lg border p-4">
-              <summary className="cursor-pointer font-semibold">
-                {group.title}
-              </summary>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {group.keys.map((name) => (
-                  <form.AppField key={name} name={name}>
-                    {(field) => (
-                      <div className="grid gap-1">
-                        <field.Number
-                          label={policyLabels[name]}
-                          {...numericFields.cache[name]}
-                        />
-                        <p className="text-xs leading-relaxed text-muted-foreground">
-                          {policyHelp[name]}
-                          {name.endsWith("_bytes") &&
-                            ` Current: ${policyValue(name, field.state.value)}.`}
-                        </p>
-                      </div>
-                    )}
-                  </form.AppField>
-                ))}
-              </div>
-            </details>
-          ))}
+          <Accordion
+            type="multiple"
+            value={expanded}
+            onValueChange={(value) =>
+              void setExpanded(value as typeof expanded)
+            }
+            className="gap-3"
+          >
+            {policyGroups.map((group) => (
+              <AccordionItem
+                key={group.title}
+                value={group.title}
+                className="rounded-lg border px-4"
+              >
+                <AccordionTrigger>{group.title}</AccordionTrigger>
+                <AccordionContent>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    {group.keys.map((name) => (
+                      <form.AppField key={name} name={name}>
+                        {(field) => (
+                          <div className="grid gap-1">
+                            <field.Number
+                              label={policyLabels[name]}
+                              {...numericFields.cache[name]}
+                            />
+                            <p className="text-xs leading-relaxed text-muted-foreground">
+                              {policyHelp[name]}
+                              {name.endsWith("_bytes") &&
+                                ` Current: ${policyValue(name, field.state.value)}.`}
+                            </p>
+                          </div>
+                        )}
+                      </form.AppField>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
           <Field
             label="Bind address"
             name="listen"

@@ -16,6 +16,7 @@ import { McpSettings } from "@/components/settings/mcp";
 import { OAuth } from "@/components/settings/oauth";
 import { Server } from "@/components/settings/server";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/lib/use-api-query";
 
 const sections = [
@@ -81,9 +82,11 @@ export function Settings({ api }: Readonly<{ api: Api }>) {
       </nav>
       {query.error && <Notice>{query.error.message}</Notice>}
       {!query.error && !query.data && (
-        <p role="status" className="text-muted-foreground">
-          Loading settings…
-        </p>
+        <div role="status" className="grid max-w-3xl gap-4">
+          <span className="sr-only">Loading settings…</span>
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-2/3" />
+        </div>
       )}
       {!query.error && query.data && (
         <>

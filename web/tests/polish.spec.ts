@@ -249,10 +249,12 @@ test("history uses complete-search filters, readable scope and effective tool ac
             target: {
               command_id: 7765,
               item_id: 7,
+              media_type: "tv",
               missing_only: true,
               season: 3,
               source: "sonarr",
               title: "Moonberry Station",
+              tmdb_id: 42,
             },
             tool: "refresh_media",
           },
@@ -272,6 +274,23 @@ test("history uses complete-search filters, readable scope and effective tool ac
   await expect(history).toContainText("Moonberry Station");
   await expect(history).toContainText("S03, Missing only");
   await expect(history).toContainText("Accepted");
+  await expect(
+    history.getByRole("link", { exact: true, name: "Moonberry Station" }),
+  ).toHaveAttribute("href", "https://www.themoviedb.org/tv/42");
+  await history
+    .getByRole("button", {
+      exact: true,
+      name: "Technical details for Moonberry Station",
+    })
+    .click();
+  await expect(history.locator("code")).toContainText('"command_id":7765');
+  await history
+    .getByRole("button", {
+      exact: true,
+      name: "Technical details for Moonberry Station",
+    })
+    .click();
+  await expect(history.locator("code")).toHaveCount(0);
   const filtered = page.waitForRequest(
     (request) =>
       new URL(request.url()).pathname === "/v1/config/mcp/audit" &&
@@ -284,9 +303,9 @@ test("history uses complete-search filters, readable scope and effective tool ac
   await page.getByLabel("Search tools", { exact: true }).fill("refesh");
   await expect(
     page.getByRole("table", { exact: true, name: "Tools" }),
-  ).toContainText("Needs an access grant");
+  ).toContainText("Needs grant");
   await expect(
-    page.getByRole("link", { exact: true, name: "Review access" }),
+    page.getByRole("link", { name: /^Review access for / }),
   ).toHaveAttribute("href", /\/settings\/access\?entry=/);
 });
 

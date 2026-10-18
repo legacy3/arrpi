@@ -4,6 +4,7 @@
 - Use the pinned Rust toolchain, Rust 2024 and MSRV 1.95. Commit Cargo.lock.
 - Keep dependencies acyclic: app → core/adapters/MCP; adapters/MCP → core. Core owns traits and policy; adapters own HTTP and storage.
 - The Next.js/TypeScript UI lives in `web/`, uses pnpm, shadcn and `@wowlab/eslint-config`, and runs separately from Rust. Only core mounts SQLite.
+- Check the shadcn catalogue before adding interactive controls. Compose its local primitives for app-specific workflows; preserve keyboard behavior and accessible labels.
 - Store settings and secrets in SQLite. Append numbered SQL migrations; never edit released migrations. Never log credentials, native URLs, query strings or response bodies.
 - Send media requests through the bound Seerr account. Sonarr/Radarr allow only typed metadata-refresh and release-search commands with explicit source grants; never expose arbitrary writes or change profiles, monitoring or tags. Authenticate before cache lookup; include source and query identity in cache keys.
 - Bound bodies, caches, requests and concurrency. Keep healthy source results when another source fails.

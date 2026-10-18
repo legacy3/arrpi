@@ -8,6 +8,7 @@
 /web/.next/
 /web/out/
 /web/next-env.d.ts
+/web/AGENTS.md
 /web/tsconfig.tsbuildinfo
 /web/test-results/
 /web/playwright-report/

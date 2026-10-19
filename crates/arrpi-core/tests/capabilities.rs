@@ -12,7 +12,8 @@ use arrpi_core::{
     source::{
         AccountSource, Actor, ActorRights, ApiSource, Body, BrokerProfile, BrokerProfiles,
         CalendarSource, Descriptor, Freshness, Health, LibrarySource, Observation, Principal,
-        ProfileSelection, QualityProfile, ReadMode, RequestSource, SourceRead, Sources,
+        ProfileSelection, QualityProfile, RatingsSource, ReadMode, RequestSource, SourceRead,
+        Sources,
     },
 };
 use async_trait::async_trait;
@@ -50,6 +51,82 @@ fn healthy() -> Health {
         needs_account: false,
         freshness: None,
     }
+}
+
+#[derive(Debug)]
+struct RatingsProvider {
+    descriptor: Descriptor,
+    probes: Arc<AtomicUsize>,
+}
+
+#[async_trait]
+impl ApiSource for RatingsProvider {
+    fn descriptor(&self) -> &Descriptor {
+        &self.descriptor
+    }
+
+    fn ratings(&self) -> Option<&dyn RatingsSource> {
+        Some(self)
+    }
+
+    async fn health(&self, _: &Principal, _: ReadMode) -> Result<Health, ApiError> {
+        self.probes.fetch_add(1, Ordering::SeqCst);
+        Ok(healthy())
+    }
+}
+
+#[async_trait]
+impl RatingsSource for RatingsProvider {
+    async fn snapshot(&self, _: ReadMode) -> Result<SourceRead<Body>, ApiError> {
+        panic!("a health request must not read the ratings inventory")
+    }
+}
+
+#[tokio::test]
+async fn ratings_only_provider_exposes_health_only_with_its_status_grant() {
+    let (mut commands, mut principal) = fixture(None);
+    let probes = Arc::new(AtomicUsize::new(0));
+
+    commands.sources = Sources::new();
+    commands
+        .sources
+        .insert(Broker {
+            descriptor: descriptor("catalog"),
+            requests_enabled: false,
+        })
+        .expect("required account broker");
+    commands
+        .sources
+        .insert(RatingsProvider {
+            descriptor: descriptor("ratings"),
+            probes: Arc::clone(&probes),
+        })
+        .expect("ratings-only provider");
+    principal.permissions.clear();
+    assert_eq!(
+        commands
+            .execute(&principal, ToolId::ServiceStatus, json!({}))
+            .await,
+        Err(ApiError::FORBIDDEN)
+    );
+    assert_eq!(probes.load(Ordering::SeqCst), 0);
+    principal.permissions.insert("ratings:status-view".into());
+    assert!(
+        commands
+            .list(&principal)
+            .await
+            .expect("discovery")
+            .iter()
+            .any(|tool| tool.name == "service_status")
+    );
+    let status = commands
+        .execute(&principal, ToolId::ServiceStatus, json!({}))
+        .await
+        .expect("authorized health");
+
+    assert_eq!(status["complete"], true);
+    assert_eq!(status["sources"][0]["source"], "ratings");
+    assert_eq!(probes.load(Ordering::SeqCst), 1);
 }
 
 #[derive(Debug, Default)]

@@ -119,7 +119,8 @@ impl Commands {
 
             ToolId::ServiceStatus => {
                 self.sources.iter().any(|(name, source)| {
-                    (source.summaries().is_some() && principal.allows(name, "status-view"))
+                    ((source.summaries().is_some() || source.ratings().is_some())
+                        && principal.allows(name, "status-view"))
                         || (source.library().is_some() && principal.allows(name, "library-view"))
                         || (source.calendar().is_some() && principal.allows(name, "calendar-view"))
                 }) || (self.sources.account_source().is_some()

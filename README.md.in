@@ -98,9 +98,9 @@ Output is JSON; failures return a nonzero exit code. Run `arrpi --help` for argu
 
 For fresh data, use `--no-cache`, the web UI’s **Explorer → Fresh upstream read** checkbox or an MCP tool’s `no_cache` argument.
 
-### Windows
+### Executables
 
-Download `arrpi-windows-x86_64.zip` and its SHA-256 checksum from [Releases](https://github.com/legacy3/arrpi/releases/latest). Extract it and run `arrpi.exe`; Docker is optional. See [Windows setup](docs/windows.md) for server and CLI commands.
+Download binaries and SHA-256 checksums from [Releases](https://github.com/legacy3/arrpi/releases/latest): Linux x86-64/ARM64, macOS Intel/Apple Silicon and Windows x86-64. The executable includes the API, CLI and MCP server; Docker is optional. See [Linux/macOS setup](docs/binaries.md) or [Windows setup](docs/windows.md).
 
 ### Without Docker
 

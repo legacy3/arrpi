@@ -15,7 +15,8 @@ pub(super) async fn status(
     let mut output = Vec::with_capacity(sources.len());
 
     for (name, source) in sources {
-        let authorized = (source.summaries().is_some() && principal.allows(name, "status-view"))
+        let authorized = ((source.summaries().is_some() || source.ratings().is_some())
+            && principal.allows(name, "status-view"))
             || (source.library().is_some() && principal.allows(name, "library-view"))
             || (source.calendar().is_some() && principal.allows(name, "calendar-view"))
             || (source.accounts().is_some()

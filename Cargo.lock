@@ -81,7 +81,7 @@ dependencies = [
 
 [[package]]
 name = "arrpi"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "arrpi-adapters",
  "arrpi-core",
@@ -114,7 +114,7 @@ dependencies = [
 
 [[package]]
 name = "arrpi-adapters"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "arrayvec",
  "arrpi-core",
@@ -143,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "arrpi-core"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -162,7 +162,7 @@ dependencies = [
 
 [[package]]
 name = "arrpi-mcp"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "arrpi-core",
  "async-trait",

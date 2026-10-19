@@ -1,4 +1,5 @@
 /target/
+/dist/
 /.rulewright.lock
 /arrpi-import.json
 /.env

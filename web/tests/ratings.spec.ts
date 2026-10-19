@@ -9,6 +9,25 @@ for (const origin of origins) {
   test(`community ratings and provider filters through ${origin}`, async ({
     request,
   }) => {
+    const health = await request.post(`${origin}/v1/tools/service_status`, {
+      data: { no_cache: true },
+      headers,
+    });
+
+    expect(health.ok()).toBe(true);
+    const status = (await health.json()) as { sources: unknown[] };
+
+    expect(status.sources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "plex",
+          reachable: true,
+          source: "plex",
+          writes_supported: false,
+        }),
+      ]),
+    );
+
     const library = await request.post(`${origin}/v1/tools/search_library`, {
       data: {
         available: true,

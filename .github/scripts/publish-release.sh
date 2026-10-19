@@ -5,9 +5,13 @@ cd "$(dirname "$0")/../.."
 version=$(jq -r .version web/package.json)
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 tag="v$version"
-assets=(arrpi-windows-x86_64.zip arrpi-windows-x86_64.zip.sha256 docs/images/mcp-demo.mp4)
+assets=(arrpi-windows-x86_64.zip arrpi-windows-x86_64.zip.sha256)
+for platform in linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64; do
+  archive="arrpi-$platform.tar.gz"
+  assets+=("$archive" "$archive.sha256")
+done
 for asset in "${assets[@]}"; do test -s "$asset"; done
-sha256sum -c arrpi-windows-x86_64.zip.sha256
+for checksum in ./*.sha256; do sha256sum -c "$checksum"; done
 
 # Immutable releases require every asset to be uploaded before publication.
 if gh release view "$tag" --json isDraft --jq .isDraft > /tmp/arrpi-release-draft; then

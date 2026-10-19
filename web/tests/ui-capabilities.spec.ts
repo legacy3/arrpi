@@ -9,6 +9,45 @@ async function choose(page: Page, label: string, option: string) {
   await page.getByRole("option", { exact: true, name: option }).click();
 }
 
+test("closing a source picker does not dismiss a newly opened operation picker", async ({
+  connect,
+  page,
+}) => {
+  await connect("/explorer", requester);
+  await page.route("**/picker-motion.css", (route) =>
+    route.fulfill({
+      body: '[data-slot="popover-content"][data-state="closed"], [data-slot="popover-content"][data-closed] { animation-duration: 700ms !important; }',
+      contentType: "text/css",
+    }),
+  );
+  await page.addStyleTag({
+    url: new URL("/picker-motion.css", page.url()).href,
+  });
+  await choose(page, "Source", "seerr");
+  await page.getByRole("combobox", { exact: true, name: "Operation" }).click();
+  const input = page.getByRole("combobox", {
+    exact: true,
+    name: "Search operation",
+  });
+
+  await expect(input).toBeFocused();
+  await expect(
+    page.getByRole("combobox", {
+      exact: true,
+      includeHidden: true,
+      name: "Search source",
+    }),
+  ).toHaveCount(0);
+  await expect(input).toBeFocused();
+  await expect(
+    page.getByRole("option", { exact: true, name: "Search for media" }),
+  ).toBeVisible();
+  await input.press("Escape");
+  await expect(
+    page.getByRole("combobox", { exact: true, name: "Operation" }),
+  ).toBeFocused();
+});
+
 test("Explorer scopes maintenance commands and presets the selected source", async ({
   connect,
   page,

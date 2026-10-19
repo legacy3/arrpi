@@ -46,6 +46,8 @@ export function clientSchema(
   names: string[],
   stored: boolean,
   oauthBound = false,
+  keepConfigAccess = false,
+  trackingBound = false,
 ) {
   return z
     .object({
@@ -64,6 +66,20 @@ export function clientSchema(
       seerr_id: optionalId(1, 4_294_967_295),
     })
     .superRefine((value, context) => {
+      if (
+        keepConfigAccess &&
+        !hasConfigAccess(
+          value.permissions.split(",").map((permission) => permission.trim()),
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "Add another administrator before removing configuration access from this client.",
+          path: ["permissions"],
+        });
+      }
+
       if (oauthBound && (!value.seerr_id || !value.plex_id)) {
         context.addIssue({
           code: "custom",
@@ -73,7 +89,10 @@ export function clientSchema(
       }
 
       if (
-        (oauthBound || Boolean(value.seerr_id) || Boolean(value.plex_id)) &&
+        (oauthBound ||
+          trackingBound ||
+          Boolean(value.seerr_id) ||
+          Boolean(value.plex_id)) &&
         hasConfigAccess(
           value.permissions.split(",").map((permission) => permission.trim()),
         )

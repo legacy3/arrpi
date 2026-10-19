@@ -70,7 +70,7 @@ The UI reads `ARRPI_CORE_ORIGIN` at startup, so changing its core server does no
 
 Open `http://127.0.0.1:3000/` and enter the admin key. Add your apps’ URLs and API keys under **Settings → Connections**. ArrPi must be able to reach those URLs; for apps in Docker, use their service names on a shared network.
 
-Create client keys under **Settings → Access** and choose which sources and operations each client can use. Use these keys in dashboards and scripts. Keep the admin key for managing ArrPi.
+Create client keys under **Settings → Access**. Choose **Media assistant** for MCP, **Read only** for browsing, **API reader** for scripts or **Administrator** for server setup. Presets use your configured sources; expand **Customize permissions** for individual grants. Keep the admin key separate from requester accounts.
 
 The overview puts current connection health before library, queue and app activity. Diagnostics stay collapsible. In **Explorer**, choose a source to see its available reads and account commands. Common commands offer title lookup and guided fields, with JSON available for advanced use. **All sources** groups combined library, queue, monitoring and calendar operations. Seerr searches, requests and issues use the connected requester account. The calendar combines the connected Sonarr and Radarr libraries. Personal RSS/iCalendar setup is covered in [feeds](docs/api.md#personal-feed-subscriptions).
 

@@ -74,6 +74,19 @@ export function SearchableChoice({
       <PopoverContent
         align="start"
         className="w-(--radix-popover-trigger-width) min-w-56 max-w-[calc(100vw-2rem)] p-0"
+        onCloseAutoFocus={(event) => {
+          const active = document.activeElement;
+
+          // A closing picker must not steal focus from the next control.
+          if (
+            active &&
+            active !== document.body &&
+            event.target instanceof Node &&
+            !event.target.contains(active)
+          ) {
+            event.preventDefault();
+          }
+        }}
       >
         <Command shouldFilter={false}>
           <CommandInput

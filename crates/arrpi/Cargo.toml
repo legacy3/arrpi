@@ -1,6 +1,6 @@
 [package]
 name = "arrpi"
-version = "0.1.10"
+version = "0.1.11"
 edition.workspace = true
 rust-version.workspace = true
 description = "A bounded media API gateway and Seerr-backed MCP server"

@@ -90,22 +90,21 @@ export function Explorer({
             className="w-full sm:w-48"
           />
         </div>
-        {operation && (
-          <div className="grid min-w-0 gap-2">
-            <Label htmlFor="explorer-operation">Operation</Label>
-            <Choice
-              id="explorer-operation"
-              label="Operation"
-              value={operation.id}
-              onChange={(value) => void select({ operation: value })}
-              options={available.map((item) => ({
-                label: item.label,
-                value: item.id,
-              }))}
-              className="w-full sm:w-72"
-            />
-          </div>
-        )}
+        <div className="grid min-w-0 gap-2">
+          <Label htmlFor="explorer-operation">Operation</Label>
+          <Choice
+            id="explorer-operation"
+            label="Operation"
+            value={operation?.id ?? ""}
+            disabled={catalog.isFetching || !operation}
+            onChange={(value) => void select({ operation: value })}
+            options={available.map((item) => ({
+              label: item.label,
+              value: item.id,
+            }))}
+            className="w-full sm:w-72"
+          />
+        </div>
         <Button
           variant="ghost"
           size="icon"

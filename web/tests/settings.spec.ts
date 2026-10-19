@@ -619,7 +619,20 @@ test("editing tracking client access preserves its isolated native binding", asy
   await page
     .getByRole("button", { exact: true, name: "Edit tracking-alice" })
     .click();
+  await page
+    .getByRole("combobox", { exact: true, name: "Permission preset" })
+    .click();
+  await expect(
+    page.getByRole("option", { exact: true, name: "Administrator" }),
+  ).toBeDisabled();
+  await page.keyboard.press("Escape");
   await setGrants(page, ["View personal tracking"]);
+  await expect(
+    page.getByRole("checkbox", {
+      exact: true,
+      name: "Full administrator access",
+    }),
+  ).toBeDisabled();
   await page.getByRole("button", { exact: true, name: "Save" }).click();
   await expect(page.getByRole("status")).toHaveText("Saved and applied.");
   expect(

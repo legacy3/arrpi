@@ -1,10 +1,12 @@
-import { KeyRound } from "lucide-react";
+import { KeyRound, ListChecks } from "lucide-react";
+import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 
 import type { SettingsDocument } from "@/lib/settings";
 
 import { CopyText } from "@/components/copy-text";
 import { Button } from "@/components/ui/button";
+import { parsePermissions, permissionProfile } from "@/lib/permissions";
 import { hasConfigAccess } from "@/lib/settings";
 
 import { AccountPicker } from "./account-picker";
@@ -56,7 +58,7 @@ export function Access(props: EditorProps) {
       onAdd={() => select("")}
       onSelect={select}
       entries={clients.map((entry) => ({
-        detail: `${entry.permissions.length} grants${entry.seerr_user ? ", Plex-linked requester" : ""}${hasConfigAccess(entry.permissions) ? ", configuration access" : ""}`,
+        detail: `${permissionProfile(entry.permissions, props.document.settings.sources)}${entry.seerr_user ? ", Plex-linked requester" : ""}${hasConfigAccess(entry.permissions) ? ", configuration access" : ""}`,
         id: entry.name,
         name: entry.name,
       }))}
@@ -85,14 +87,16 @@ function ClientEditor({
     removalBlocked = `Used by ${String(oauthBindings)} OAuth ${identityLabel}. Remove these bindings in OAuth settings first.`;
   }
 
-  if (
+  const keepConfigAccess = Boolean(
     client &&
     hasConfigAccess(client.permissions) &&
     !settings.clients.some(
       (entry) =>
         entry.name !== client.name && hasConfigAccess(entry.permissions),
-    )
-  ) {
+    ),
+  );
+
+  if (keepConfigAccess) {
     removalBlocked = "Keep at least one client with configuration access.";
   }
 
@@ -111,16 +115,15 @@ function ClientEditor({
         .map((entry) => entry.name),
       Boolean(client),
       oauthBindings > 0,
+      keepConfigAccess,
+      Boolean(client?.tracking_user),
     ),
     (value) => {
       const updated = {
         ...client,
         key: value.key || null,
         name: value.name,
-        permissions: value.permissions
-          .split(",")
-          .map((entry) => entry.trim())
-          .filter(Boolean),
+        permissions: parsePermissions(value.permissions),
         seerr_user: value.seerr_id
           ? { id: Number(value.seerr_id), plex_id: Number(value.plex_id) }
           : null,
@@ -222,22 +225,52 @@ function ClientEditor({
           <form.AppField name="plex_id">
             {(field) => <field.Errors />}
           </form.AppField>
-          <form.AppField name="permissions">
-            {(field) => (
-              <div className="grid gap-2">
-                <field.Control label="Permissions">
-                  <Grants
-                    sources={settings.sources}
-                    value={field.state.value}
-                    onChange={(value) => {
-                      field.handleChange(value);
-                      field.handleBlur();
-                    }}
-                  />
-                </field.Control>
-              </div>
+          <form.Subscribe
+            selector={(state) =>
+              Boolean(state.values.seerr_id || state.values.plex_id)
+            }
+          >
+            {(linked) => (
+              <form.AppField name="permissions">
+                {(field) => (
+                  <div className="grid gap-2">
+                    <field.Control label="Permissions">
+                      <Grants
+                        linked={linked}
+                        original={client?.permissions}
+                        adminBlocked={
+                          linked ||
+                          oauthBindings > 0 ||
+                          Boolean(client?.tracking_user)
+                        }
+                        sources={settings.sources}
+                        value={field.state.value}
+                        onChange={(value) => {
+                          field.handleChange(value);
+                          field.handleBlur();
+                        }}
+                      />
+                    </field.Control>
+                  </div>
+                )}
+              </form.AppField>
             )}
-          </form.AppField>
+          </form.Subscribe>
+          {client?.seerr_user && (
+            <Button
+              asChild
+              type="button"
+              variant="link"
+              className="justify-self-start px-0"
+            >
+              <Link
+                href={`/mcp?account=${encodeURIComponent(client.name)}&view=tools`}
+              >
+                <ListChecks className="size-4" />
+                View saved MCP tool access
+              </Link>
+            </Button>
+          )}
         </form.Editor>
       </form.AppForm>
       {client && (

@@ -77,20 +77,35 @@ export async function mockConfigEditor(
 
 export async function setGrants(page: Page, labels: string[]) {
   const grants = page.getByRole("group", { exact: true, name: "Permissions" });
-  const names = await grants
-    .locator('label:has([role="checkbox"][aria-checked="true"])')
-    .allTextContents();
+  const customize = grants.getByRole("button", {
+    exact: true,
+    name: "Customize permissions",
+  });
 
-  for (const name of names.map((name) => name.trim())) {
-    if (!labels.includes(name)) {
-      await grants
-        .getByRole("checkbox", { checked: true, exact: true, name })
-        .first()
-        .uncheck();
-    }
+  if ((await customize.getAttribute("aria-expanded")) === "false") {
+    await customize.click();
   }
 
-  for (const name of labels) {
-    await grants.getByRole("checkbox", { exact: true, name }).check();
+  const admin = grants.getByRole("checkbox", {
+    exact: true,
+    name: "Full administrator access",
+  });
+
+  if (
+    (await admin.isChecked()) &&
+    !labels.includes("Full administrator access")
+  ) {
+    await admin.uncheck();
+  }
+
+  for (const checkbox of await grants.getByRole("checkbox").all()) {
+    const label = await checkbox.evaluate(
+      (element) => element.closest("label")?.textContent?.trim() ?? "",
+    );
+    const checked = labels.includes(label);
+
+    if ((await checkbox.isChecked()) !== checked) {
+      await checkbox.setChecked(checked);
+    }
   }
 }

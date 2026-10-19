@@ -236,12 +236,15 @@ test("OAuth dependencies block client removal until the identity is removed", as
     page.getByRole("button", { exact: true, name: "Save" }),
   ).toBeDisabled();
   await choose(page, "Requester account", "Fixture owner");
-  await setGrants(page, ["Full administrator access"]);
-  await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "before granting configuration access",
-  );
+  await setGrants(page, ["Browse request catalog"]);
   await expect(
-    page.getByRole("button", { exact: true, name: "Save" }),
+    page.getByRole("checkbox", {
+      exact: true,
+      name: "Full administrator access",
+    }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("checkbox", { exact: true, name: "Manage ArrPi settings" }),
   ).toBeDisabled();
   expect(writes).toHaveLength(0);
   await page.getByRole("link", { exact: true, name: "OAuth" }).click();

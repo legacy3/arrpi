@@ -2,6 +2,7 @@
 use super::Order;
 use crate::arguments::MediaType;
 use crate::error::ApiError;
+use crate::ratings::{self, Provider, Rating};
 use serde::Serialize;
 use serde_json::value::RawValue;
 use std::{
@@ -24,7 +25,7 @@ pub struct LibraryItem<'a> {
     pub overview: Option<Cow<'a, str>>,
     pub genres: Vec<Cow<'a, str>>,
     pub rating: Option<f64>,
-    pub rating_provider: Option<&'static str>,
+    pub rating_provider: Option<Provider>,
     pub ratings: Vec<Rating>,
     pub runtime_minutes: Option<u64>,
     pub certification: Option<Cow<'a, str>>,
@@ -60,14 +61,18 @@ pub struct FileQuality<'a> {
     pub source: Option<Cow<'a, str>>,
 }
 
-/// A native rating with explicit score normalization and vote provenance.
-#[derive(Debug, Serialize)]
-pub struct Rating {
-    pub provider: &'static str,
-    pub score: f64,
-    pub raw_value: f64,
-    pub raw_scale: f64,
-    pub votes: Option<u64>,
+impl LibraryItem<'_> {
+    pub(super) fn enrich(&mut self, ratings: &[Rating]) {
+        if ratings.is_empty() {
+            return;
+        }
+
+        self.ratings.extend_from_slice(ratings);
+        let community = ratings::community(&self.ratings);
+
+        self.rating = community.map(|rating| rating.score);
+        self.rating_provider = community.map(|rating| rating.provider);
+    }
 }
 
 /// Movie presence or Sonarr's monitored-aired episode coverage.
@@ -96,6 +101,7 @@ pub(super) struct Candidate<'a> {
     pub(super) source_index: usize,
     index: usize,
     key: SortKey,
+    ratings: &'a [Rating],
 }
 
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -108,14 +114,16 @@ enum SortKey {
 impl<'a> Candidate<'a> {
     pub(super) fn new(
         item: &LibraryItem<'a>,
-        order: Order,
+        filter: &super::CompiledFilter,
         raw: &'a RawValue,
         index: usize,
     ) -> Self {
-        let key = match order {
+        let key = match filter.order() {
             Order::Title => SortKey::Title(item.title.to_lowercase()),
 
-            Order::Rating => SortKey::Number(Reverse(item.rating.map(f64::to_bits))),
+            Order::Rating => SortKey::Number(Reverse(
+                filter.rating(item).map(|rating| rating.score.to_bits()),
+            )),
 
             Order::Newest => SortKey::Number(Reverse(item.year)),
 
@@ -134,11 +142,20 @@ impl<'a> Candidate<'a> {
             source_index: 0,
             index,
             key,
+            ratings: &[],
         }
     }
 
+    pub(super) fn with_ratings(mut self, ratings: &'a [Rating]) -> Self {
+        self.ratings = ratings;
+        self
+    }
+
     pub(super) fn project(self) -> Result<LibraryItem<'a>, ApiError> {
-        super::native::Native::decode(self.raw)?.project(self.source, self.kind)
+        let mut item = super::native::Native::decode(self.raw)?.project(self.source, self.kind)?;
+
+        item.enrich(self.ratings);
+        Ok(item)
     }
 }
 

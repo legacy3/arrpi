@@ -147,6 +147,13 @@ export const catalog: Media[] = [
   })),
 ];
 
+export function communityRatings(item: Media) {
+  return {
+    audienceScore: item.id === 99 ? 87 : 80 + (item.id % 15),
+    criticsScore: item.id === 99 ? 91 : 78 + (item.id % 12),
+  };
+}
+
 export function findMedia(kind: Kind, id: number) {
   return catalog.find((item) => item.kind === kind && item.id === id);
 }
@@ -159,7 +166,8 @@ export function nativeMedia(item: Media) {
     monitored: true,
     overview: item.overview,
     path: `/private/${item.kind === "movie" ? "movies" : "tv"}`,
-    ratings: { imdb: { value: item.rating, votes: 100 } },
+    qualityProfileId: 1,
+    ratings: { imdb: { value: item.rating, votes: 24_000 } },
     runtime: item.runtime,
     title: item.title,
     tmdbId: item.id,

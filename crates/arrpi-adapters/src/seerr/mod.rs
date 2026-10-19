@@ -5,6 +5,7 @@ mod identity;
 mod issues;
 pub(crate) mod links;
 pub(crate) mod model;
+mod ratings;
 mod requests;
 mod version;
 

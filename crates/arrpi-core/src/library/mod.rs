@@ -2,13 +2,17 @@
 mod filter;
 mod model;
 mod native;
+mod ratings;
 mod selection;
 
 use crate::{arguments::MediaType, error::ApiError};
 use serde::Serialize;
 
+#[doc(inline)]
+pub use crate::ratings::Rating;
 pub use filter::{CompiledFilter, LibraryFilter, Order};
-pub use model::{Availability, FileMetadata, FileQuality, LibraryItem, Rating};
+pub use model::{Availability, FileMetadata, FileQuality, LibraryItem};
+pub use ratings::{RatingIndex, RatingRecord};
 
 /// A validated source selection whose text borrows its native snapshot.
 #[derive(Debug)]
@@ -46,7 +50,21 @@ pub fn select<'a>(
     body: &'a [u8],
     filter: &CompiledFilter,
 ) -> Result<Selection<'a>, ApiError> {
-    selection::decode(source, kind, body, filter)
+    selection::decode(source, kind, body, filter, None)
+}
+
+/// Select after joining authorized community ratings, so filters and sorting see them.
+///
+/// # Errors
+/// Returns the same validation failures as the native library selector.
+pub fn select_with_ratings<'a>(
+    source: &'a str,
+    kind: MediaType,
+    body: &'a [u8],
+    filter: &CompiledFilter,
+    ratings: &'a RatingIndex,
+) -> Result<Selection<'a>, ApiError> {
+    selection::decode(source, kind, body, filter, Some(ratings))
 }
 
 /// Sort a combined selection once and retain only the requested page.

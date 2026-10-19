@@ -210,6 +210,7 @@ function SourceEditor({
                 <field.Select
                   label="App"
                   options={[
+                    "plex",
                     "sonarr",
                     "radarr",
                     "sabnzbd",

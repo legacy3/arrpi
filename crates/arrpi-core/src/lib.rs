@@ -11,6 +11,7 @@ pub mod library;
 pub mod maintenance;
 pub mod oauth;
 pub mod policy;
+pub mod ratings;
 pub mod registry;
 pub mod schema;
 pub mod secret;

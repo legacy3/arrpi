@@ -248,6 +248,10 @@ pub trait ApiSource: Debug + Send + Sync {
         None
     }
 
+    fn ratings(&self) -> Option<&dyn RatingsSource> {
+        None
+    }
+
     fn maintenance(&self) -> Option<&dyn crate::maintenance::MaintenanceSource> {
         None
     }
@@ -315,6 +319,12 @@ pub trait CalendarSource: Debug + Send + Sync {
         end: &str,
         mode: ReadMode,
     ) -> Result<SourceRead<Vec<crate::contracts::CalendarEvent>>, ApiError>;
+}
+
+/// Community metadata snapshots enrich library queries without per-title network reads.
+#[async_trait]
+pub trait RatingsSource: Debug + Send + Sync {
+    async fn snapshot(&self, mode: ReadMode) -> Result<SourceRead<Body>, ApiError>;
 }
 
 /// Requestable catalog operations accept typed user inputs, never raw paths.

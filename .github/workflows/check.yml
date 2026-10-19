@@ -1,28 +1,57 @@
 name: CI
-
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
-  workflow_dispatch:
-
+    branches:
+      - main
+  workflow_dispatch: null
 permissions:
   contents: read
-
 concurrency:
   group: check-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      RUSTFLAGS: -C target-feature=+crt-static
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Toolchain
+        run: rustup toolchain install 1.96.1 --profile minimal
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-msvc-static-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: windows-msvc-static-
+      - name: Build, smoke-test and package Windows executable
+        shell: pwsh
+        run: ./.github/scripts/check-windows.ps1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: windows-x86_64
+          path: |
+            arrpi-windows-x86_64.zip
+            arrpi-windows-x86_64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
   rust:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Toolchain
-        run: rustup toolchain install 1.96.1 --profile minimal --component rustfmt --component clippy
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        run:
+          rustup toolchain install 1.96.1 --profile minimal --component rustfmt
+          --component clippy
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             ~/.cargo/registry
@@ -32,120 +61,53 @@ jobs:
           restore-keys: rust-${{ runner.os }}-
       - name: Cached developer tools
         id: developer-tools
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             ~/.cargo/bin/rulewright
             ~/.cargo/bin/markupwright
-          key: dev-tools-ubuntu24-${{ runner.arch }}-rust1.96.1-rulewright0.1.2-markupwright0.1.3
+          key: dev-tools-ubuntu24-${{ runner.arch
+            }}-rust1.96.1-rulewright0.1.2-markupwright0.1.3
       - name: Developer tools
         if: steps.developer-tools.outputs.cache-hit != 'true'
-        run: |
-          cargo install rulewright --version '=0.1.2' --locked
-          cargo install markupwright --version '=0.1.3' --locked
-      - name: Check
-        run: |
-          cargo fmt --check
-          cargo test --workspace --locked
-          cargo clippy --workspace --locked --all-targets -- -D warnings
-          cargo bench -p arrpi-core --locked --no-run
-          cargo bench -p arrpi-core --locked --bench library -- --sample-count 10 --sample-size 1
-          rulewright --strict
-          markupwright --check
-          git diff --check
-      - name: Declared minimum Rust
-        run: |
-          rustup toolchain install 1.95.0 --profile minimal
-          cargo +1.95.0 check --workspace --locked
+        run: bash .github/scripts/install-dev-tools.sh
+      - name: Rust checks
+        run: bash .github/scripts/check-rust.sh
   container:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 24.22.0
-      - name: Frontend tools
-        working-directory: web
-        run: |
-          npm install --global pnpm@11.17.0
-          pnpm install --frozen-lockfile
-          pnpm exec playwright install --with-deps chromium
-      - name: Documentation formatting
-        working-directory: web
-        run: |
-          pnpm exec prettier --check ../AGENTS.md ../README.md '../docs/**/*.md' ../third_party/native-types/README.md ../.github/workflows/check.yml
-          pnpm exec prettier --check ../README.md.in --parser markdown
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
         with:
           version: 0.12.4
           enable-cache: true
           cache-dependency-glob: scripts/*.py.lock
-      - name: Python helper checks
-        run: |
-          uvx --from black==26.10.1 black --check scripts
-          uv lock --script scripts/screenshot.py --check
-          uv lock --script scripts/demo.py --check
-      - name: Frontend checks
-        working-directory: web
-        run: |
-          pnpm format:check
-          pnpm lint
-          pnpm check
-          pnpm types:check
-      - name: Validate deployment manifests
-        run: |
-          docker compose -f deploy/compose.yaml config --quiet
-          docker compose -f deploy/compose.yaml -f deploy/compose.web.yaml config --quiet
-          docker compose -f deploy/compose.test.yaml config --quiet
-          docker compose -f deploy/compose.test.yaml -f deploy/compose.preview.yaml config --quiet
-        env:
-          ARRPI_PREVIEW_BIND: 127.0.0.2
-      - name: Build and start images
-        run: docker compose -p arrpi-test -f deploy/compose.test.yaml up --build -d --wait
-      - name: Identical UI artifact at independent core origins
-        run: |
-          primary=$(docker compose -p arrpi-test -f deploy/compose.test.yaml ps -q arrpi-ui)
-          secondary=$(docker compose -p arrpi-test -f deploy/compose.test.yaml ps -q ui-secondary)
-          test "$(docker inspect --format '{{.Image}}' "$primary")" = "$(docker inspect --format '{{.Image}}' "$secondary")"
-      - name: Browser and proxy integration tests
-        working-directory: web
-        run: pnpm test
-      - name: Container CLI
-        run: |
-          docker compose -p arrpi-test -f deploy/compose.test.yaml exec -T arrpi arrpi health --url http://arrpi-ui:3000
-          docker compose -p arrpi-test -f deploy/compose.test.yaml exec -T -e ARRPI_TEST_CLIENT_KEY=fake-browser-key-00000000000000000000 arrpi arrpi get sonarr series --url http://arrpi-ui:3000 --key-env ARRPI_TEST_CLIENT_KEY --no-cache --metadata
-          docker compose -p arrpi-test -f deploy/compose.test.yaml exec -T arrpi arrpi health --url http://127.0.0.1:8780
-      - name: Container test harness lint
-        run: |
-          curl -fsSL https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz -o /tmp/shellcheck.tar.xz
-          printf '%s  %s\n' 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198 /tmp/shellcheck.tar.xz | sha256sum -c
-          tar -xJf /tmp/shellcheck.tar.xz -C /tmp
-          /tmp/shellcheck-v0.11.0/shellcheck deploy/test-containers.sh
-      - name: Runtime contents, image budgets and lifecycle
-        run: bash deploy/test-containers.sh
-      - name: Standalone and optional UI smoke
-        env:
-          ARRPI_CORE_IMAGE: arrpi-core:test
-          ARRPI_UI_IMAGE: arrpi-ui:test
-        run: |
-          docker compose -p arrpi-smoke -f deploy/compose.yaml up --no-build --pull never -d --wait
-          curl -fsS http://127.0.0.1:8780/health
-          docker compose -p arrpi-smoke -f deploy/compose.yaml -f deploy/compose.web.yaml up --no-build --pull never -d --wait
-          curl -fsS http://127.0.0.1:3000/ui-health
-          curl -fsS http://127.0.0.1:3000/health
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/v1/status)" = 401
-      - name: Logs and cleanup
-        if: always()
-        run: |
-          docker compose -p arrpi-test -f deploy/compose.test.yaml logs
-          docker compose -p arrpi-smoke -f deploy/compose.yaml -f deploy/compose.web.yaml logs
-          docker compose -p arrpi-test -f deploy/compose.test.yaml down
-          docker compose -p arrpi-smoke -f deploy/compose.yaml -f deploy/compose.web.yaml down --volumes
-
+      - name: Frontend tools
+        run: bash .github/scripts/setup-web.sh
+      - name: Frontend and documentation checks
+        run: bash .github/scripts/check-web.sh
+      - name: Container integration and runtime checks
+        run: bash .github/scripts/check-containers.sh
+      - name: Browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: browser-failures
+          path: |-
+            web/test-results/
+            web/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
   images:
     name: Image (${{ matrix.target }}, ${{ matrix.machine.arch }})
-    needs: [rust, container]
+    needs:
+      - rust
+      - container
+      - windows
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -153,34 +115,41 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [core, ui]
+        target:
+          - core
+          - ui
         machine:
-          - { arch: amd64, platform: linux/amd64, runner: ubuntu-24.04 }
-          - { arch: arm64, platform: linux/arm64, runner: ubuntu-24.04-arm }
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.machine.runner }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Registry image
         id: image
         env:
           TARGET: ${{ matrix.target }}
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/arrpi-$TARGET" >> "$GITHUB_OUTPUT"
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/arrpi-$TARGET" >>
+          "$GITHUB_OUTPUT"
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Image metadata
         id: metadata
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302
         with:
           images: ${{ steps.image.outputs.name }}
           tags: type=sha,format=long
       - name: Build and publish architecture
         id: build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: deploy/Dockerfile
@@ -188,50 +157,32 @@ jobs:
           platforms: ${{ matrix.machine.platform }}
           labels: ${{ steps.metadata.outputs.labels }}
           annotations: ${{ steps.metadata.outputs.annotations }}
-          outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=release-${{ matrix.target }}-${{ matrix.machine.arch }}
-          cache-to: type=gha,mode=max,scope=release-${{ matrix.target }}-${{ matrix.machine.arch }}
+          outputs: type=image,name=${{ steps.image.outputs.name
+            }},push-by-digest=true,name-canonical=true,push=true
+          cache-from:
+            type=gha,scope=release-${{ matrix.target }}-${{ matrix.machine.arch
+            }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.target }}-${{
+            matrix.machine.arch }}
           provenance: mode=max
           sbom: true
       - name: Smoke-test native image
         env:
           IMAGE: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
           TARGET: ${{ matrix.target }}
-        run: |
-          docker pull "$IMAGE"
-          trap 'docker rm --force arrpi-image-smoke >/dev/null 2>&1 || true' EXIT
-          mounts=(--tmpfs "/tmp:size=32m,mode=1777")
-          if [ "$TARGET" = core ]; then
-            mounts+=(--tmpfs "/state:size=16m,uid=1000,gid=1000,mode=0700")
-          else
-            mounts+=(--tmpfs "/app/web/.next/cache:size=32m,uid=1000,gid=1000,mode=0700")
-          fi
-          docker run -d --name arrpi-image-smoke --network none --read-only \
-            --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 128 \
-            "${mounts[@]}" \
-            --health-start-period 0s --health-interval 1s --health-timeout 5s --health-retries 10 "$IMAGE"
-          for ((attempt = 0; attempt < 30; attempt++)); do
-            if [ "$(docker inspect --format '{{.State.Running}}' arrpi-image-smoke)" != true ]; then break; fi
-            health=$(docker inspect --format '{{.State.Health.Status}}' arrpi-image-smoke) || break
-            if [ "$health" = healthy ]; then exit 0; fi
-            if [ "$health" = unhealthy ]; then break; fi
-            sleep 1
-          done
-          docker logs arrpi-image-smoke
-          exit 1
+        run: bash .github/scripts/smoke-image.sh
       - name: Record tested digest
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p /tmp/digests
           touch "/tmp/digests/${DIGEST#sha256:}"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: digests-${{ matrix.target }}-${{ matrix.machine.arch }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
-
   publish:
     name: Publish
     needs: images
@@ -241,13 +192,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           path: /tmp/digests
           pattern: digests-*
@@ -255,44 +207,23 @@ jobs:
       - name: Publish tested multi-platform manifests
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          for target in core ui; do
-            image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/arrpi-$target"
-            reference="$image:sha-$GITHUB_SHA"
-            if docker buildx imagetools inspect "$reference" >/dev/null 2>/tmp/arrpi-existing-manifest.err; then
-              echo "Retaining existing commit manifest: $reference"
-              continue
-            fi
-            if ! grep -Fq -- "$reference: not found" /tmp/arrpi-existing-manifest.err && ! grep -Fq 'manifest unknown' /tmp/arrpi-existing-manifest.err; then
-              cat /tmp/arrpi-existing-manifest.err
-              exit 1
-            fi
-            sources=()
-            for file in /tmp/digests/digests-"$target"-*/*; do
-              digest="${file##*/}"
-              [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || exit 1
-              sources+=("$image@sha256:$digest")
-            done
-            test "${#sources[@]}" = 2
-            docker buildx imagetools create -t "$reference" \
-              --annotation "index:org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
-              --annotation "index:org.opencontainers.image.revision=$GITHUB_SHA" "${sources[@]}"
-            docker buildx imagetools inspect "$reference"
-          done
-          # Commit tags are retained; an old re-run must not roll latest backwards.
-          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
-          if [ "$current" = "$GITHUB_SHA" ]; then
-            for target in core ui; do
-              image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/arrpi-$target"
-              promoted=false
-              for ((attempt = 0; attempt < 3; attempt++)); do
-                if docker buildx imagetools create -t "$image:latest" "$image:sha-$GITHUB_SHA"; then
-                  promoted=true
-                  break
-                fi
-                sleep 2
-              done
-              test "$promoted" = true
-            done
-          fi
-          echo "Published core/UI commit manifests for $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+        run: bash .github/scripts/publish-images.sh
+  release:
+    name: Release
+    needs:
+      - windows
+      - publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: windows-x86_64
+      - name: Publish complete immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/publish-release.sh

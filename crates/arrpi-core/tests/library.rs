@@ -24,6 +24,79 @@ fn page(bytes: &[u8], kind: MediaType, args: &LibraryFilter) -> Value {
 }
 
 #[test]
+fn external_ratings_participate_before_filtering_sorting_and_pagination() {
+    use arrpi_core::library::{RatingIndex, select_with_ratings};
+    let native = br#"[{"id":1,"tmdbId":41,"title":"First","hasFile":true,"runtime":100},{"id":2,"tmdbId":42,"title":"Second","hasFile":true,"runtime":90},{"id":3,"tmdbId":43,"title":"Long","hasFile":true,"runtime":190}]"#;
+    let external = serde_json::to_vec(&json!([
+        {"media_type":"movie","tmdb_id":41,"tvdb_id":null,"imdb_id":null,"ratings":[{"provider":"imdb","origin":"plex","score":8.1,"raw_value":8.1,"raw_scale":10.0,"votes":null}]},
+        {"media_type":"movie","tmdb_id":42,"tvdb_id":null,"imdb_id":null,"ratings":[{"provider":"imdb","origin":"plex","score":8.8,"raw_value":8.8,"raw_scale":10.0,"votes":null}]},
+        {"media_type":"movie","tmdb_id":43,"tvdb_id":null,"imdb_id":null,"ratings":[{"provider":"imdb","origin":"plex","score":9.9,"raw_value":9.9,"raw_scale":10.0,"votes":null}]},
+        {"media_type":"tv","tmdb_id":41,"tvdb_id":null,"imdb_id":null,"ratings":[{"provider":"imdb","origin":"plex","score":2.0,"raw_value":2.0,"raw_scale":10.0,"votes":null}]}
+    ])).expect("external fixture");
+    let mut index = RatingIndex::new();
+
+    index.extend(&external).expect("index");
+    let args = query(
+        json!({"rating_provider":"imdb","min_rating":8,"max_runtime_minutes":120,"sort":"rating","limit":1}),
+    );
+    let filter = args.compile().expect("filter");
+    let selected = select_with_ratings("movies", MediaType::Movie, native, &filter, &index)
+        .expect("selection");
+    let result = paginate(vec![selected], &args).expect("page");
+
+    assert_eq!(result.total, 2);
+    assert_eq!(result.items[0].id, 2);
+    assert!((result.items[0].ratings[0].score - 8.8).abs() < f64::EPSILON);
+    assert_eq!(result.next_offset, Some(1));
+    let args = query(json!({"rating_provider":"imdb","min_votes":1}));
+    let selected = select_with_ratings(
+        "movies",
+        MediaType::Movie,
+        native,
+        &args.compile().expect("filter"),
+        &index,
+    )
+    .expect("selection");
+
+    assert_eq!(
+        paginate(vec![selected], &args).expect("page").total,
+        0,
+        "unknown vote counts cannot satisfy a minimum"
+    );
+}
+
+#[test]
+fn critic_zero_and_percentage_scores_remain_distinct_from_missing_ratings() {
+    let native = br#"[{"id":1,"title":"Zero","ratings":{"rottenTomatoes":{"value":0}}},{"id":2,"title":"Missing"},{"id":3,"title":"Rated","ratings":{"imdb":{"value":7,"votes":200},"rottenTomatoes":{"value":95}}}]"#;
+    let result = page(
+        native,
+        MediaType::Movie,
+        &query(json!({"rating_provider":"rottenTomatoes","min_rating":0,"sort":"rating"})),
+    );
+
+    assert_eq!(result["total"], 2);
+    assert_eq!(result["items"][0]["id"], 3);
+    assert_eq!(result["items"][1]["ratings"][0]["score"], 0.0);
+    let result = page(
+        native,
+        MediaType::Movie,
+        &query(json!({"rating_provider":"imdb","min_votes":201})),
+    );
+
+    assert_eq!(result["total"], 0);
+
+    for invalid in [
+        json!({"rating_provider":"random"}),
+        json!({"max_runtime_minutes":0}),
+        json!({"max_runtime_minutes":10001}),
+    ] {
+        if let Ok(args) = serde_json::from_value::<LibraryFilter>(invalid) {
+            assert!(args.validate().is_err());
+        }
+    }
+}
+
+#[test]
 fn all_public_movie_fields_preserve_the_native_projection() {
     let native = json!([{
         "id":1,"title":"ÄÖÜ & original","originalTitle":"Original","year":2024,
@@ -43,7 +116,7 @@ fn all_public_movie_fields_preserve_the_native_projection() {
             "source":"source","id":1,"media_type":"movie","title":"ÄÖÜ & original","original_title":"Original",
             "year":2024,"tmdb_id":42,"tvdb_id":null,"imdb_id":"tt1234567","overview":"Eine Geschichte",
             "genres":["Comedy","Drama"],"rating":7.5,"rating_provider":"imdb",
-            "ratings":[{"provider":"imdb","score":7.5,"raw_value":7.5,"raw_scale":10.0,"votes":100},{"provider":"rottenTomatoes","score":8.2,"raw_value":82.0,"raw_scale":100.0,"votes":0}],
+            "ratings":[{"provider":"imdb","origin":"radarr","score":7.5,"raw_value":7.5,"raw_scale":10.0,"votes":100},{"provider":"rottenTomatoes","origin":"radarr","score":8.2,"raw_value":82.0,"raw_scale":100.0,"votes":0}],
             "runtime_minutes":123,"certification":"FSK 12","original_language":"German","status":"released",
             "studio":"Studio","network":"Network","added_at":"2026-10-01T00:00:00Z","release_date":"2024-01-01",
             "digital_release_date":"2024-02-01","physical_release_date":"2024-03-01","monitored":true,

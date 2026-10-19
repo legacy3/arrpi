@@ -42,6 +42,7 @@ pub(crate) fn media(value: &Value) -> Result<Value, ApiError> {
         .as_object_mut()
         .ok_or(ApiError::INTERNAL)?
         .extend(overall.as_object().ok_or(ApiError::INTERNAL)?.clone());
+    super::ratings::metadata(value, &mut output)?;
     Ok(output)
 }
 

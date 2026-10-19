@@ -3,7 +3,7 @@ set -euo pipefail
 
 core_image=${1:-arrpi-core:test}
 ui_image=${2:-arrpi-ui:test}
-repo_dir=$(cd "$(dirname "$0")/.." && pwd)
+repo_dir=$(cd "$(dirname "$0")/../.." && pwd)
 core_name="arrpi-core-lifecycle-$$-$RANDOM"
 ui_name="arrpi-ui-lifecycle-$$-$RANDOM"
 invalid_name="arrpi-ui-invalid-$$-$RANDOM"

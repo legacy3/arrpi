@@ -53,12 +53,24 @@ pub(super) async fn load(
         }
     }
 
+    let (rating_reads, mut rating_statuses) = external_reads(
+        sources,
+        principal,
+        if args.no_cache {
+            ReadMode::Fresh
+        } else {
+            ReadMode::Cached
+        },
+    )
+    .await;
+
     let _lease = normalizations.try_acquire()?;
+    let ratings = build_index(&rating_reads, &mut rating_statuses, args.no_cache);
 
     let mut selections = Vec::with_capacity(snapshots.len());
 
     for (name, kind, read) in &snapshots {
-        match library::select(name, *kind, read.data.as_ref(), &filter) {
+        match library::select_with_ratings(name, *kind, read.data.as_ref(), &filter, &ratings) {
             Ok(selection) => {
                 selections.push(selection);
                 statuses.push(json!({"source":name,"status":"ok","cache":read.freshness.cache,"age_seconds":read.freshness.age_seconds.unwrap_or(0)}));
@@ -71,11 +83,18 @@ pub(super) async fn load(
     }
 
     statuses.sort_by(|left, right| left["source"].as_str().cmp(&right["source"].as_str()));
-    let complete = !statuses.is_empty() && statuses.iter().all(|status| status["status"] == "ok");
+    let ratings_complete = rating_statuses
+        .iter()
+        .all(|status| status["status"] == "ok");
+    let complete = !statuses.is_empty()
+        && statuses.iter().all(|status| status["status"] == "ok")
+        && ratings_complete;
     let mut output = serde_json::to_value(library::paginate(selections, &args)?)?;
 
     output["complete"] = json!(complete);
     output["sources"] = json!(statuses);
+    output["rating_sources"] = json!(rating_statuses);
+    output["ratings_complete"] = json!(ratings_complete);
     Ok(output)
 }
 
@@ -85,4 +104,57 @@ fn selected(tool: ToolId, kind: MediaType) -> bool {
         ToolId::ListSeries => kind == MediaType::Tv,
         _ => true,
     }
+}
+
+async fn external_reads<'a>(
+    sources: &'a Sources,
+    principal: &Principal,
+    mode: ReadMode,
+) -> (
+    Vec<(&'a str, crate::source::SourceRead<crate::source::Body>)>,
+    Vec<Value>,
+) {
+    let mut reads = Vec::new();
+    let mut statuses = Vec::new();
+
+    for (name, source) in sources {
+        if !principal.allows(name, "ratings-view") {
+            continue;
+        }
+
+        let Some(provider) = source.ratings() else {
+            continue;
+        };
+
+        match provider.snapshot(mode).await {
+            Ok(read) => reads.push((name, read)),
+
+            Err(error) => {
+                statuses.push(json!({"source":name,"status":"unavailable","code":error.code()}));
+            }
+        }
+    }
+
+    (reads, statuses)
+}
+
+fn build_index(
+    rating_reads: &[(&str, crate::source::SourceRead<crate::source::Body>)],
+    rating_statuses: &mut Vec<Value>,
+    bypass: bool,
+) -> library::RatingIndex {
+    let mut ratings = library::RatingIndex::default();
+
+    for (name, read) in rating_reads {
+        match ratings.extend(read.data.as_ref()) {
+            Ok(()) => rating_statuses.push(
+                json!({"source":name,"status":"ok","freshness":read.freshness.public(bypass)}),
+            ),
+
+            Err(error) => rating_statuses
+                .push(json!({"source":name,"status":"unavailable","code":error.code()})),
+        }
+    }
+
+    ratings
 }

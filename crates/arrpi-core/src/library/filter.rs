@@ -46,6 +46,17 @@ pub struct LibraryFilter {
     #[serde(default)]
     #[schemars(range(min = 0, max = 10))]
     pub min_rating: Option<f64>,
+    /// Select the provider used by `min_rating`, `min_votes` and rating sorting.
+    /// Without this, prefer `IMDb`, TMDB, Trakt, then the Sonarr-reported score.
+    #[serde(default)]
+    pub rating_provider: Option<crate::ratings::Provider>,
+    /// Minimum votes for the selected rating. Unknown vote counts do not qualify.
+    #[serde(default)]
+    pub min_votes: Option<u64>,
+    /// Maximum runtime in minutes; unknown runtimes do not qualify.
+    #[serde(default)]
+    #[schemars(range(min = 1, max = 10000))]
+    pub max_runtime_minutes: Option<u32>,
     /// Stable sorting for the combined source snapshot.
     #[serde(default)]
     pub sort: Order,
@@ -70,6 +81,9 @@ pub struct CompiledFilter {
     year_from: Option<u32>,
     year_to: Option<u32>,
     min_rating: Option<f64>,
+    rating_provider: Option<crate::ratings::Provider>,
+    min_votes: Option<u64>,
+    max_runtime_minutes: Option<u32>,
     sort: Order,
     capacity: usize,
     media_type: Option<MediaType>,
@@ -93,6 +107,9 @@ impl LibraryFilter {
                 .as_ref()
                 .is_some_and(|q| q.len() > 256 || q.chars().any(char::is_control))
             || self.genres.len() > 20
+            || self
+                .max_runtime_minutes
+                .is_some_and(|runtime| !(1..=10000).contains(&runtime))
             || self.genres.iter().any(|g| !valid_text(g))
             || self.year_from.is_some_and(|y| !valid_year(y))
             || self.year_to.is_some_and(|y| !valid_year(y))
@@ -130,6 +147,9 @@ impl LibraryFilter {
             year_from: self.year_from,
             year_to: self.year_to,
             min_rating: self.min_rating,
+            rating_provider: self.rating_provider,
+            min_votes: self.min_votes,
+            max_runtime_minutes: self.max_runtime_minutes,
             sort: self.sort,
             capacity: self.offset.saturating_add(self.limit),
             media_type: self.media_type,
@@ -138,6 +158,20 @@ impl LibraryFilter {
 }
 
 impl CompiledFilter {
+    pub(super) fn rating<'a>(
+        &self,
+        item: &'a LibraryItem<'_>,
+    ) -> Option<&'a crate::ratings::Rating> {
+        self.rating_provider.map_or_else(
+            || crate::ratings::community(&item.ratings),
+            |provider| {
+                item.ratings
+                    .iter()
+                    .find(|rating| rating.provider == provider)
+            },
+        )
+    }
+
     pub(super) const fn order(&self) -> Order {
         self.sort
     }
@@ -174,7 +208,16 @@ impl CompiledFilter {
                 .is_none_or(|year| item.year.is_some_and(|value| value <= u64::from(year)))
             && self
                 .min_rating
-                .is_none_or(|rating| item.rating.is_some_and(|value| value >= rating))
+                .is_none_or(|rating| self.rating(item).is_some_and(|value| value.score >= rating))
+            && self.min_votes.is_none_or(|votes| {
+                self.rating(item)
+                    .and_then(|rating| rating.votes)
+                    .is_some_and(|count| count >= votes)
+            })
+            && self.max_runtime_minutes.is_none_or(|maximum| {
+                item.runtime_minutes
+                    .is_some_and(|runtime| runtime <= u64::from(maximum))
+            })
             && self
                 .available
                 .is_none_or(|available| item.available == available)

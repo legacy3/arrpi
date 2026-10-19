@@ -1,5 +1,6 @@
 //! Borrowed, tolerant native fields; unknown media objects are never allocated.
 use super::{Availability, FileMetadata, FileQuality, LibraryItem, Rating};
+use crate::ratings::{self, Origin, Provider};
 use crate::{arguments::MediaType, error::ApiError};
 use serde::{
     Deserialize, Deserializer,
@@ -129,9 +130,18 @@ impl<'a> Native<'a> {
         let id = positive(self.id).ok_or(ApiError::INVALID_RESPONSE)?;
         let title = text(self.title, 1024).ok_or(ApiError::INVALID_RESPONSE)?;
         let ratings = ratings(self.ratings);
-        let community = ["imdb", "tmdb", "trakt", "sonarr"]
-            .into_iter()
-            .find_map(|provider| ratings.iter().find(|rating| rating.provider == provider));
+        let origin = if kind == MediaType::Movie {
+            Origin::Radarr
+        } else {
+            Origin::Sonarr
+        };
+        let mut ratings = ratings;
+
+        for rating in &mut ratings {
+            rating.origin = origin;
+        }
+
+        let community = ratings::community(&ratings);
         let rating = community.map(|rating| rating.score);
         let rating_provider = community.map(|rating| rating.provider);
         let statistics: Statistics<'_> = parse(self.statistics).unwrap_or_default();
@@ -271,12 +281,12 @@ fn ratings(raw: Option<&RawValue>) -> Vec<Rating> {
 
 fn rating(name: &str, raw: Option<&RawValue>) -> Option<Rating> {
     let (provider, scale) = match name {
-        "imdb" => ("imdb", 10.0),
-        "tmdb" => ("tmdb", 10.0),
-        "trakt" => ("trakt", 10.0),
-        "sonarr" => ("sonarr", 10.0),
-        "rottenTomatoes" => ("rottenTomatoes", 100.0),
-        "metacritic" => ("metacritic", 100.0),
+        "imdb" => (Provider::Imdb, 10.0),
+        "tmdb" => (Provider::Tmdb, 10.0),
+        "trakt" => (Provider::Trakt, 10.0),
+        "sonarr" => (Provider::Sonarr, 10.0),
+        "rottenTomatoes" => (Provider::RottenTomatoes, 100.0),
+        "metacritic" => (Provider::Metacritic, 100.0),
         _ => return None,
     };
     let value: NativeRating<'_> = parse(raw)?;
@@ -284,21 +294,11 @@ fn rating(name: &str, raw: Option<&RawValue>) -> Option<Rating> {
         .filter(|value: &f64| value.is_finite() && (0.0..=scale).contains(value))?;
     let votes = parse(value.votes);
 
-    if raw_value <= 0.0 || (votes == Some(0) && scale < 100.0) {
+    if (raw_value <= 0.0 || votes == Some(0)) && scale < 100.0 {
         return None;
     }
 
-    Some(Rating {
-        provider,
-        score: if scale > 10.0 {
-            raw_value / 10.0
-        } else {
-            raw_value
-        },
-        raw_value,
-        raw_scale: scale,
-        votes,
-    })
+    Rating::new(provider, Origin::Radarr, raw_value, scale, votes)
 }
 
 fn availability(kind: MediaType, counts: &Statistics<'_>, available: bool) -> Availability {

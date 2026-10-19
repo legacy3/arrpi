@@ -12,7 +12,7 @@ ArrPi has four Rust crates and an optional Next.js frontend. Dependency directio
 
 ## Sources and commands
 
-`ApiSource` advertises optional native, library, calendar, summary, catalog, account, request and issue capabilities. A provider implements only the capabilities it supports. Source registration is independent of command orchestration; capability tests use fake providers to exercise these interfaces independently of native apps.
+`ApiSource` advertises optional native, library, community ratings, calendar, summary, catalog, account, request and issue capabilities. A provider implements only the capabilities it supports. Source registration is independent of command orchestration; capability tests use fake providers to exercise these interfaces independently of native apps.
 
 Core uses semantic `ActorRights`. The account adapter resolves the bound native account and translates its permissions. Local grants and capability availability are checked before identity I/O. Native account rights remain authoritative and are read fresh.
 
@@ -26,7 +26,7 @@ Native JSON stays native. A shared HTTP implementation limits status/body collec
 
 Body reservations track backing allocations, not only visible slice lengths. Eviction cannot release a reservation while a response consumer still holds the bytes. Maintenance prunes expired entries; pressure reclaims idle fresh entries in bounded global LRU order. Active refreshes remain protected. Resource pools belong to settings revisions, so draining requests can retain an older pool after an apply. These limits are not an absolute process RSS ceiling.
 
-Library selection parses borrowed native data, keeps the requested top-K page and projects only selected items. A bounded CPU pool admits library/calendar and operational summary normalization after network reads. Queue records use an ArrayVec with a 100-row deserialization cap; traversal keeps at most twenty pages of provenance and bounded deduplication state. Healthy sources survive another source's failure; incomplete data is explicit. [Benchmarking](performance.md) covers allocation tests and runtime profiling.
+Library selection parses borrowed native data, keeps the requested top-K page and projects only selected items. Optional `RatingsSource` snapshots join community metadata by TMDB/type, TVDB or IMDb before filtering and sorting. Plex pages the inventory and reads full metadata in matching batches of at most 100 IDs into one sanitized cached snapshot; it never projects personal scores or playback history. Library reads do not fan out into per-title catalog requests. Seerr detail batches retrieve its additional IMDb/Rotten Tomatoes scores separately. A bounded CPU pool admits library/calendar and operational summary normalization after network reads. Queue records use an ArrayVec with a 100-row deserialization cap; traversal keeps at most twenty pages of provenance and bounded deduplication state. Healthy sources survive another source's failure; incomplete data is explicit. [Benchmarking](performance.md) covers allocation tests and runtime profiling.
 
 ## Mutations and identity
 

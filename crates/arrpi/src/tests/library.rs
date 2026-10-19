@@ -42,6 +42,104 @@ async fn query(api: &Server, args: Value) -> (reqwest::StatusCode, Value) {
 }
 
 #[tokio::test]
+async fn plex_ratings_join_queries_with_cache_freshness_and_source_authorization() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    };
+    let calls = Arc::new(AtomicUsize::new(0));
+    let denied = Arc::new(AtomicBool::new(false));
+    let counted = Arc::clone(&calls);
+    let failure = Arc::clone(&denied);
+    let router = axum::Router::new().fallback(axum::routing::get(move |uri: axum::http::Uri, headers: axum::http::HeaderMap| {
+        let counted = Arc::clone(&counted);
+        let failure = Arc::clone(&failure);
+
+        async move {
+            if uri.path() == "/api/v3/movie" {
+                return (axum::http::StatusCode::OK, axum::Json(json!([
+                    {"id":1,"tmdbId":42,"title":"Moonberry","hasFile":true},
+                    {"id":2,"tmdbId":43,"title":"Cloudberry","hasFile":true}
+                ])));
+            }
+
+            assert_eq!(headers.get("x-plex-token").and_then(|value| value.to_str().ok()), Some("fake-plex-key"));
+            assert!(!uri.to_string().contains("fake-plex-key"));
+            counted.fetch_add(1, Ordering::Relaxed);
+
+            if failure.load(Ordering::Relaxed) { return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(json!({}))); }
+
+            let metadata = if uri.path().starts_with("/library/metadata/") {
+                json!([
+                    {"type":"movie","ratingKey":"42","Guid":[{"id":"tmdb://42"}],"Rating":[{"image":"imdb://image.rating","type":"audience","value":8.5}],"userRating":1,"path":"never-leak"},
+                    {"type":"movie","ratingKey":"43","Guid":[{"id":"tmdb://43"}],"Rating":[{"image":"imdb://image.rating","type":"audience","value":6.5}]}
+                ])
+            } else if uri.query().unwrap_or_default().starts_with("type=1&") {
+                json!([
+                    {"type":"movie","ratingKey":"42","Guid":[{"id":"tmdb://42"}],"rating":6.0,"ratingImage":"rottentomatoes://image.rating.rotten"},
+                    {"type":"movie","ratingKey":"43","Guid":[{"id":"tmdb://43"}]}
+                ])
+            } else { json!([]) };
+
+            (axum::http::StatusCode::OK, axum::Json(json!({"MediaContainer":{"offset":0,"Metadata":metadata}})))
+        }
+    }));
+    let native = server(router).await;
+    let config: Config = serde_json::from_value(json!({
+        "listen":"127.0.0.1:0","mcp":{"enabled":true},"seerr":{"url":native.url,"api_key":"fake-seerr-key"},
+        "sources":{"radarr":{"kind":"radarr","url":native.url,"api_key":"fake-arr-key"},"plex":{"kind":"plex","url":native.url,"api_key":"fake-plex-key"}},
+        "clients":[{"name":"reader","key":CLIENT_KEY,"permissions":["radarr:library-view","plex:ratings-view"]},
+            {"name":"limited","key":super::OTHER_KEY,"permissions":["radarr:library-view"]}]
+    })).expect("rating settings");
+    let api = server(crate::proxy::router(
+        Gateway::new(&config, tokio::time::Instant::now).expect("gateway"),
+    ))
+    .await;
+    let (status, value) = query(
+        &api,
+        json!({"rating_provider":"imdb","min_rating":8,"sort":"rating"}),
+    )
+    .await;
+
+    assert_eq!(status, reqwest::StatusCode::OK);
+    assert_eq!(value["total"], 1);
+    assert_eq!(value["items"][0]["ratings"][0]["origin"], "plex");
+    assert_eq!(calls.load(Ordering::Relaxed), 3);
+    assert_eq!(value["items"][0]["rating"], 8.5);
+    assert_eq!(value["rating_sources"][0]["status"], "ok");
+    assert_eq!(value["complete"], true);
+    assert!(!value.to_string().contains("never-leak"));
+    let fetched = calls.load(Ordering::Relaxed);
+    let (_, cached) = query(&api, json!({})).await;
+
+    assert_eq!(cached["rating_sources"][0]["freshness"]["cache"], "hit");
+    assert_eq!(calls.load(Ordering::Relaxed), fetched);
+    let response = reqwest::Client::new()
+        .post(format!("{}v1/tools/search_library", api.url))
+        .bearer_auth(super::OTHER_KEY)
+        .json(&json!({"rating_provider":"imdb","min_rating":8}))
+        .send()
+        .await
+        .expect("restricted query");
+    let restricted: Value = response.json().await.expect("restricted result");
+
+    assert_eq!(restricted["total"], 0);
+    assert_eq!(restricted["rating_sources"], json!([]));
+    assert_eq!(calls.load(Ordering::Relaxed), fetched);
+    let (_, fresh) = query(&api, json!({"no_cache":true})).await;
+
+    assert_eq!(fresh["rating_sources"][0]["freshness"]["cache"], "miss");
+    assert!(calls.load(Ordering::Relaxed) > fetched);
+    denied.store(true, Ordering::Relaxed);
+    let (_, failed) = query(&api, json!({"no_cache":true})).await;
+
+    assert_eq!(failed["items"].as_array().expect("native rows").len(), 2);
+    assert_eq!(failed["complete"], false);
+    assert_eq!(failed["ratings_complete"], false);
+    assert_eq!(failed["rating_sources"][0]["code"], "permission_denied");
+}
+
+#[tokio::test]
 async fn structured_filters_return_recommendation_metadata_without_private_fields() {
     let data = json!([
         {"id":1,"title":"Funny Movie","year":2023,"genres":["Comedy","Drama"],"overview":"A funny story","runtime":110,"inCinemas":"2023-01-01","releaseDate":"2024-01-01","digitalRelease":"2023-06-01","physicalRelease":"2024-01-01","imdbId":"tt12345","hasFile":true,"path":"/private","ratings":{"imdb":{"value":8.2,"votes":100},"rottenTomatoes":{"value":95,"votes":0}},"movieFile":{"relativePath":"secret"}},

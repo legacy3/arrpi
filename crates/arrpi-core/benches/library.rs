@@ -72,6 +72,27 @@ fn serialized_page_20(bencher: Bencher, count: usize) {
     });
 }
 
+#[divan::bench(args = [100, 1000, 10_000], sample_count = 10, sample_size = 1)]
+fn plex_enriched_page(bencher: Bencher, count: usize) {
+    use arrpi_core::library::{RatingIndex, paginate, select_with_ratings};
+    let body = support::fixture(count, true);
+    let records = (1..=count).map(|id| serde_json::json!({"media_type":"movie","tmdb_id":id,"tvdb_id":null,"imdb_id":null,"ratings":[{"provider":"rottenTomatoes","origin":"plex","score":8.5,"raw_value":8.5,"raw_scale":10.0,"votes":null}]})).collect::<Vec<_>>();
+    let mut index = RatingIndex::new();
+
+    index
+        .extend(&serde_json::to_vec(&records).expect("ratings fixture"))
+        .expect("rating index");
+    let query = support::query(20, false, false, count);
+    let filter = query.compile().expect("filter");
+
+    bencher.bench_local(|| {
+        let rows = select_with_ratings("movies", MediaType::Movie, &body, &filter, &index)
+            .expect("selection");
+
+        divan::black_box_drop(paginate(vec![rows], &query).expect("page"));
+    });
+}
+
 impl fmt::Display for Case {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

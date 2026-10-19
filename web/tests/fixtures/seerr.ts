@@ -4,7 +4,13 @@ import {
   type ServerResponse,
 } from "node:http";
 
-import { catalog, findMedia, type Kind, type Media } from "./media.ts";
+import {
+  catalog,
+  communityRatings,
+  findMedia,
+  type Kind,
+  type Media,
+} from "./media.ts";
 
 type Issue = {
   createdBy: { id: number };
@@ -17,6 +23,8 @@ type Issue = {
 };
 
 type Receipt = {
+  profileId?: number;
+  serverId?: number;
   id: number;
   is4k: false;
   media: {
@@ -145,11 +153,19 @@ async function createRequest(
         title: item.title,
         tmdbId: item.id,
       },
+      profileId:
+        "profileId" in value && typeof value.profileId === "number"
+          ? value.profileId
+          : undefined,
       requestedBy: { id: actor },
       seasons: (value.seasons ?? []).map((seasonNumber) => ({
         seasonNumber,
         status,
       })),
+      serverId:
+        "serverId" in value && typeof value.serverId === "number"
+          ? value.serverId
+          : undefined,
       status,
       type: value.mediaType,
       updatedAt: new Date().toISOString(),
@@ -240,6 +256,7 @@ function metadata(item: Media) {
     runtime: item.runtime,
     seasons,
     voteAverage: item.rating,
+    voteCount: 24_000,
   };
 }
 
@@ -258,10 +275,21 @@ function page<T>(items: T[], query: URLSearchParams) {
 }
 
 function permissions(actor: number) {
-  return 32 | 2_097_152 | 4_194_304 | (actor === 2 ? autoApprove : 0);
+  return 32 | 2_097_152 | 4_194_304 | (actor === 2 ? autoApprove | 8192 : 0);
 }
 
 function read(path: string, actor: number, query: URLSearchParams): unknown {
+  if (/^\/api\/v1\/service\/(radarr|sonarr)$/.test(path)) {
+    return [{ activeProfileId: 1, id: 0, is4k: false, isDefault: true }];
+  }
+
+  if (/^\/api\/v1\/service\/(radarr|sonarr)\/0$/.test(path)) {
+    return {
+      profiles: [{ id: 1, name: "1080p" }],
+      server: { activeProfileId: 1, id: 0, is4k: false, isDefault: true },
+    };
+  }
+
   if (path === "/api/v1/auth/me") {
     return {
       email: "private-fixture@example.test",
@@ -314,6 +342,23 @@ function read(path: string, actor: number, query: URLSearchParams): unknown {
 }
 
 function readDetail(path: string): unknown {
+  const ratings =
+    /^\/api\/v1\/(movie|tv)\/(\d+)\/(ratingscombined|ratings)$/.exec(path);
+
+  if (ratings) {
+    const item = findMedia(ratings[1] as Kind, Number(ratings[2]));
+
+    if (!item || item.id === 85) {
+      return undefined;
+    }
+
+    const rt = communityRatings(item);
+
+    return ratings[3] === "ratingscombined"
+      ? { imdb: { criticsScore: item.rating }, rt }
+      : rt;
+  }
+
   const media = /^\/api\/v1\/(movie|tv)\/(\d+)$/.exec(path);
 
   if (media) {

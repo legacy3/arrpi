@@ -46,7 +46,9 @@ pub struct Search {
 fn first() -> u32 {
     1
 }
-#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Deserialize, Eq, JsonSchema, Ord, PartialEq, PartialOrd, Serialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum MediaType {
     Movie,

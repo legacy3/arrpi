@@ -646,6 +646,7 @@ export interface components {
      * @enum {string}
      */
     SourceKind:
+      | "plex"
       | "sonarr"
       | "radarr"
       | "sabnzbd"

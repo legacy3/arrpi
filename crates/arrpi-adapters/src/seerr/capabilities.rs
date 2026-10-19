@@ -181,7 +181,11 @@ impl CatalogSource for Backend {
     ) -> Result<Value, ApiError> {
         let value = Backend::metadata(self, binding, args.media_type.name(), args.tmdb_id).await?;
 
-        links::media(&value, settings, args.no_cache)
+        let mut output = links::media(&value, settings, args.no_cache)?;
+
+        self.community_ratings(binding, &value, &mut output, args.no_cache)
+            .await?;
+        Ok(output)
     }
 
     async fn public_settings(&self, binding: &Binding) -> Value {

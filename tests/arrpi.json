@@ -36,6 +36,11 @@
       "url": "http://fixtures:7878/",
       "api_key": "fake-upstream-api-key",
       "seerr_server_id": 0
+    },
+    "plex": {
+      "kind": "plex",
+      "url": "http://fixtures:32400/",
+      "api_key": "fake-upstream-api-key"
     }
   },
   "clients": [
@@ -68,7 +73,9 @@
         "sabnzbd:status-view",
         "cleanuparr:status-view",
         "bazarr:status-view",
-        "maintainerr:status-view"
+        "maintainerr:status-view",
+        "plex:ratings-view",
+        "plex:status-view"
       ]
     },
     {
@@ -102,7 +109,9 @@
         "issues:view",
         "issues:create",
         "sonarr:calendar-view",
-        "radarr:calendar-view"
+        "radarr:calendar-view",
+        "plex:ratings-view",
+        "plex:status-view"
       ]
     },
     {
@@ -122,7 +131,17 @@
         "issues:view",
         "issues:create",
         "sonarr:calendar-view",
-        "radarr:calendar-view"
+        "radarr:calendar-view",
+        "plex:ratings-view",
+        "plex:status-view",
+        "sonarr:library-refresh",
+        "sonarr:library-search",
+        "sonarr:library-summary",
+        "sonarr:queue-summary",
+        "radarr:library-refresh",
+        "radarr:library-search",
+        "radarr:library-summary",
+        "radarr:queue-summary"
       ]
     }
   ],

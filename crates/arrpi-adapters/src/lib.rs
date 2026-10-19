@@ -11,6 +11,7 @@ pub mod metrics;
 mod monitoring;
 mod native;
 pub mod oauth;
+mod plex;
 pub mod remote;
 pub mod seerr;
 pub mod storage;

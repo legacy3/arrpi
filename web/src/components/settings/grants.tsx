@@ -76,6 +76,9 @@ export function Grants({
             ]
           : [
               ["status-view", "Read service health"],
+              ...(source.kind === "plex"
+                ? [["ratings-view", "Read Plex community ratings"]]
+                : []),
               ...(source.kind === "crosswatch"
                 ? [
                     ["tracking-view", "View personal tracking"],

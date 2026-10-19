@@ -1,6 +1,6 @@
 [package]
 name = "arrpi-mcp"
-version = "0.1.8"
+version = "0.1.9"
 edition.workspace = true
 rust-version.workspace = true
 description = "MCP HTTP and stdio adapters for ArrPi command executors"

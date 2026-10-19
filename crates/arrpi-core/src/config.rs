@@ -137,6 +137,7 @@ pub struct Source {
 )]
 #[serde(rename_all = "lowercase")]
 pub enum SourceKind {
+    Plex,
     Sonarr,
     Radarr,
     Sabnzbd,
@@ -511,6 +512,7 @@ impl SourceKind {
             ],
 
             Self::Sabnzbd
+            | Self::Plex
             | Self::Cleanuparr
             | Self::Bazarr
             | Self::Maintainerr
@@ -522,6 +524,7 @@ impl SourceKind {
     #[must_use]
     pub const fn name(self) -> &'static str {
         match self {
+            Self::Plex => "plex",
             Self::Sonarr => "sonarr",
             Self::Radarr => "radarr",
             Self::Sabnzbd => "sabnzbd",
@@ -533,6 +536,10 @@ impl SourceKind {
     }
 
     fn allows_permission(self, endpoint: &str) -> bool {
+        if self == Self::Plex {
+            return matches!(endpoint, "ratings-view" | "status-view");
+        }
+
         if matches!(self, Self::Sonarr | Self::Radarr)
             && matches!(endpoint, "library-refresh" | "library-search")
         {

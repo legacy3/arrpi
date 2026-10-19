@@ -16,6 +16,7 @@ export const apps = {
   cleanuparr: { icon: BrushCleaning, label: "Cleanuparr" },
   crosswatch: { icon: Activity, label: "CrossWatch" },
   maintainerr: { icon: Recycle, label: "Maintainerr" },
+  plex: { icon: Film, label: "Plex" },
   radarr: { icon: Film, label: "Radarr" },
   sabnzbd: { icon: Download, label: "SABnzbd" },
   seerr: { icon: Inbox, label: "Seerr" },

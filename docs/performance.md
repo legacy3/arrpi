@@ -40,4 +40,6 @@ RSS includes stacks, mapped pages, allocator retention and caches. Container mem
 
 `cache.max_retained_bytes` limits native body backing allocations, including bytes held by consumers after eviction. `cache.max_normalizations` bounds concurrent projections. Resource pools belong to settings revisions; draining requests can retain an older pool after a settings apply. These are not absolute process RSS limits.
 
-Compose applies CPU, memory and PID limits to each service. `deploy/test-containers.sh` verifies runtime contents, image-size budgets, readiness and shutdown behavior. Keep both the standalone core and optional UI within their limits when changing dependencies or build stages. See [configuration](configuration.md#limits-and-outages) for cache and admission settings.
+Compose applies CPU, memory and PID limits to each service. `.github/scripts/test-runtime.sh` verifies runtime contents, image-size budgets, readiness and shutdown behavior. Keep both the standalone core and optional UI within their limits when changing dependencies or build stages. See [configuration](configuration.md#limits-and-outages) for cache and admission settings.
+
+The `plex_enriched_page` Divan case measures selection with a prepared community-rating index. On the development VM, a 20-item page over 10,000 entries took a median 18.6 ms (10 samples, one iteration each). The benchmark excludes upstream I/O and index construction; it does not represent whole-request RSS.

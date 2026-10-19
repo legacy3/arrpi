@@ -76,7 +76,15 @@ for (const error of [false, true]) {
     await expect(first).toBeVisible();
 
     if (error) {
-      await page.getByRole("button", { exact: true, name: "Save" }).click();
+      const save = page.getByRole("button", { exact: true, name: "Save" });
+      const rejected = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/v1/config") &&
+          response.request().method() === "PUT",
+      );
+
+      await save.press("Enter");
+      expect((await rejected).status()).toBe(400);
       await expect(page.getByRole("main").getByRole("alert")).toContainText(
         "Review both settings",
       );

@@ -26,13 +26,13 @@ Screenshots use fictional media.
 
 ## MCP demo
 
-Claude Code searches the library, checks upcoming releases, requests a movie and a TV season, manages an issue and retrieves watch links.
+Claude Code compares community ratings, checks upcoming releases, makes batch requests with a chosen profile and searches for missing episodes. All media in the recording is fictional.
 
-![Claude Code using ArrPi MCP with fictional media](docs/images/mcp-demo.gif)
+https://github.com/user-attachments/assets/83ec13e1-bc0e-4468-81b2-a9473af66107
 
 ## Install
 
-You need Docker with Compose v2 and at least one supported service: Sonarr v4, Radarr (v3 API), Seerr, SABnzbd, Bazarr, Cleanuparr, Maintainerr or CrossWatch.
+You need Docker with Compose v2 and at least one supported service: Sonarr v4, Radarr (v3 API), Seerr, SABnzbd, Bazarr, Cleanuparr, Maintainerr, Plex or CrossWatch.
 
 ### API and CLI
 
@@ -87,7 +87,7 @@ arrpi get radarr queue --page 1 --page-size 20 --no-cache --metadata
 arrpi calendar --start 2026-10-01 --end 2026-10-31
 
 # Find an available comedy
-arrpi tool search_library --arguments '{"genres":["Comedy"],"available":true,"min_rating":7}'
+arrpi tool search_library --arguments '{"genres":["Comedy"],"available":true,"min_rating":7,"rating_provider":"imdb","min_votes":10000}'
 
 # Check ArrPi or discover native apps
 arrpi health
@@ -97,6 +97,10 @@ arrpi discover --ip 192.0.2.10
 Output is JSON; failures return a nonzero exit code. Run `arrpi --help` for arguments.
 
 For fresh data, use `--no-cache`, the web UI’s **Explorer → Fresh upstream read** checkbox or an MCP tool’s `no_cache` argument.
+
+### Windows
+
+Download `arrpi-windows-x86_64.zip` and its SHA-256 checksum from [Releases](https://github.com/legacy3/arrpi/releases/latest). Extract it and run `arrpi.exe`; Docker is optional. See [Windows setup](docs/windows.md) for server and CLI commands.
 
 ### Without Docker
 
@@ -149,7 +153,7 @@ Stop core before copying the database and save the deployed image digests so you
 
 Repository rules are in [AGENTS.md](AGENTS.md); validation commands are in [CI](.github/workflows/check.yml). Rust builds independently of the optional Next.js UI.
 
-Start the local test stack with `docker compose -p arrpi-test -f deploy/compose.test.yaml up --build -d --wait`. Refresh screenshots with `uv run --locked scripts/screenshot.py --no-build`. Record the MCP demo with `uv run --locked scripts/demo.py`; it needs Claude Code, asciinema 3.2.1 and agg 1.9.0.
+Start the local test stack with `docker compose -p arrpi-test -f deploy/compose.test.yaml up --build -d --wait`. Refresh screenshots with `uv run --locked scripts/screenshot.py --no-build`. For the MCP demo, reset the disposable fixture stack with `docker compose -p arrpi-test -f deploy/compose.test.yaml down --volumes`, start it again, then run `uv run --locked scripts/demo.py --model sonnet`; it needs Claude Code, asciinema 3.2.1, agg 1.9.0 and FFmpeg. The default output is an MP4; add `--upload` to get a GitHub video attachment URL for the README.
 
 [MIT License](LICENSE).
 

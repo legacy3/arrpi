@@ -1,5 +1,5 @@
 //! Source-local top-K selection without retaining a full native array.
-use super::{CompiledFilter, Selection, model::Candidate, native::Native};
+use super::{CompiledFilter, RatingIndex, Selection, model::Candidate, native::Native};
 use crate::{arguments::MediaType, error::ApiError};
 use serde::{
     Deserializer as _,
@@ -13,6 +13,7 @@ struct Selector<'a, 'f> {
     source: &'a str,
     kind: MediaType,
     filter: &'f CompiledFilter,
+    ratings: Option<&'a RatingIndex>,
 }
 
 pub(super) fn decode<'a>(
@@ -20,12 +21,14 @@ pub(super) fn decode<'a>(
     kind: MediaType,
     body: &'a [u8],
     filter: &CompiledFilter,
+    ratings: Option<&'a RatingIndex>,
 ) -> Result<Selection<'a>, ApiError> {
     let mut decoder = serde_json::Deserializer::from_slice(body);
     let result = decoder.deserialize_seq(Selector {
         source,
         kind,
         filter,
+        ratings,
     })?;
 
     decoder.end()?;
@@ -48,14 +51,21 @@ impl<'de: 'a, 'a> Selector<'a, '_> {
             }
 
             match Native::decode(raw).and_then(|native| native.project(self.source, self.kind)) {
-                Ok(item) if self.filter.matches(&item) => {
-                    let candidate = Candidate::new(&item, self.filter.order(), raw, total);
+                Ok(mut item) => {
+                    let ratings = self.ratings.map_or(&[][..], |index| index.for_item(&item));
+
+                    item.enrich(ratings);
+
+                    if !self.filter.matches(&item) {
+                        continue;
+                    }
+
+                    let candidate =
+                        Candidate::new(&item, self.filter, raw, total).with_ratings(ratings);
 
                     total += 1;
                     retain(&mut rows, candidate, capacity);
                 }
-
-                Ok(_) => {}
 
                 Err(error) => failure = Some(error),
             }

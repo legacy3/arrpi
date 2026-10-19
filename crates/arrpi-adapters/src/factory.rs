@@ -52,7 +52,10 @@ pub fn build(config: &Config, clock: fn() -> Instant) -> Result<BuiltSources, Co
             continue;
         }
 
-        let policy = if matches!(source.kind, SourceKind::Sonarr | SourceKind::Radarr) {
+        let policy = if matches!(
+            source.kind,
+            SourceKind::Sonarr | SourceKind::Radarr | SourceKind::Plex
+        ) {
             config.cache
         } else {
             crate::monitoring::operational_policy(config.cache)
@@ -60,6 +63,18 @@ pub fn build(config: &Config, clock: fn() -> Instant) -> Result<BuiltSources, Co
         let cache = Arc::new(Cache::new(policy, clock));
 
         caches.push(Arc::downgrade(&cache));
+
+        if source.kind == SourceKind::Plex {
+            sources.insert(crate::plex::Plex::new(
+                name,
+                source,
+                config.cache,
+                http.clone(),
+                budget.clone(),
+                cache,
+            )?)?;
+            continue;
+        }
 
         if !matches!(source.kind, SourceKind::Sonarr | SourceKind::Radarr) {
             sources.insert(crate::monitoring::Monitor::new(

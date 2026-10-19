@@ -115,6 +115,7 @@ export function sourceSchema(names: string[], stored: boolean) {
     .object({
       api_key: z.string().trim(),
       kind: z.enum([
+        "plex",
         "sonarr",
         "radarr",
         "sabnzbd",
